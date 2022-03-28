@@ -89,6 +89,8 @@ export default class NuTemplate extends NuBaseModule {
     this.sampleVol = this.sampleVol.bind(this);
     this.sampleOffsetSpeed = this.sampleOffsetSpeed.bind(this);
     this.sampleSpeed = this.sampleSpeed.bind(this);
+    this.sampleLen = this.sampleLen.bind(this);
+    this.sampleLoopRandIn = this.sampleLoopRandIn.bind(this);
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
@@ -148,6 +150,21 @@ export default class NuTemplate extends NuBaseModule {
     var imag = new Float32Array(10);
     real[0] = 0; imag[0] = 0; real[1] = 1; imag[1] = 0;  
     this.wave = audioContext.createPeriodicWave(real, imag);
+
+//	    const canvas = document.getElementById('main-canvas');
+/*	    var canvas = document.createElement('canvas');
+	    this.ctx = canvas.getContext('2d');
+	    canvas.width = window.innerWidth;
+	    canvas.height = window.innerHeight;
+
+	    this.ctx.fillStyle = 'red';
+	    this.ctx.lineWidth = 0;
+	      	this.ctx.beginPath();
+	this.ctx.arc(100,300,50,0, Math.PI * 2);
+	this.ctx.closePath();
+	this.ctx.fill(); */
+
+
   }
 
 
@@ -386,6 +403,17 @@ export default class NuTemplate extends NuBaseModule {
   	}
   }
 
+	sampleLoopRandIn() {
+		var newIn = Math.floor(Math.random()*100) /100.;
+		this.bufferSource.loopStart = newIn;
+		this.bufferSource.loopEnd = newIn + this.sampleLoopLen;
+	}
+
+	sampleLen(value) {
+  		this.sampleLoopLen = value;
+		this.bufferSource.loopEnd = value + this.bufferSource.loopStart;
+	}
+
   sampleMoveOffset() {
   	this.bufferSource.loopStart = this.bufferSource.loopStart + this.sampleOffset;  	
   	if (this.bufferSource.loopStart > 1){
@@ -430,7 +458,23 @@ export default class NuTemplate extends NuBaseModule {
     // send touch pos
     this.e.send('osc', '/' + this.moduleName, ['touchPos', id, normX, normY]);
     this.sampleVol(normY);
-    this.sampleLoopOut(normX);
+    this.sampleLoopIn(normX);
+    this.sampleLoopOut(normX+this.sampleLoopLen);
+    //drawCircle(normX,normY);
+
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    //ctx.fillStyle = 'red';
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
+    ctx.closePath();
+    //ctx.fill();
+    ctx.stroke();
 
   }
 
@@ -438,12 +482,19 @@ export default class NuTemplate extends NuBaseModule {
   // hereabove callbacks
 
   touch(onOff){
+
+ // 	let str = this.formatText("0");
+ //   document.getElementById('text1').innerHTML = str;
+
+
     // enable if not already enabled
     if( onOff && !this.callBackStatus.touch ){
       this.surface.addListener('touchstart', this.touchStartCallback);
       this.surface.addListener('touchmove', this.touchMoveCallback);
       this.surface.addListener('touchend', this.touchEndCallback);
       this.callBackStatus.touch = true;
+
+
     }
     // disable if not already disabled
     if( !onOff && this.callBackStatus.touch ){
@@ -452,6 +503,22 @@ export default class NuTemplate extends NuBaseModule {
       this.surface.removeListener('touchend', this.touchEndCallback);
       this.callBackStatus.touch = false;
     }
+  }
+
+    // defined text (on top of the player's screen) from OSC client (header)
+  drawCircle(x, y){
+ 	const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    ctx.fillStyle = 'red';
+    ctx.lineWidth = 0;
+    ctx.beginPath();
+    ctx.arc(100+(x*10),300+(y*10),50,0, Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();
+
   }
 
   // re-routed event for sync. playback: server add a rdv time to msg sent by OSC client

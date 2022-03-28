@@ -176,6 +176,19 @@ export default class NuDisplay extends soundworks.Canvas2dRenderer {
   text1(args){
     let str = this.formatText(args);
     document.getElementById('text1').innerHTML = str;
+
+ /*   const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    ctx.fillStyle = 'red';
+    ctx.lineWidth = 0;
+    ctx.beginPath();
+    ctx.arc(100,300,50,0, Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();*/
+    
   }
 
   // defined text (on middle of the player's screen) from OSC client (instructions)
