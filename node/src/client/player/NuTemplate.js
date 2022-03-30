@@ -30,7 +30,7 @@ export default class NuTemplate extends NuBaseModule {
     // local attributes
   this.params = {
       'gain': 0.1,
-      'gain2': 0.1,
+      'gainB': 0.1,
       'frq': 440,
       'filterFrq':20000,
       'filterQ':1,
@@ -71,12 +71,12 @@ export default class NuTemplate extends NuBaseModule {
     this.setFrqOsc = this.setFrqOsc.bind(this);
     this.setVolOsc = this.setVolOsc.bind(this);
     this.synthType = this.synthType.bind(this);
-    this.setTuneOsc2 = this.setTuneOsc2.bind(this);
-    this.setVolOsc2 = this.setVolOsc2.bind(this);
-    this.synthType2 = this.synthType2.bind(this);
+    this.setTuneOscB = this.setTuneOscB.bind(this);
+    this.setVolOscB = this.setVolOscB.bind(this);
+    this.synthTypeB = this.synthTypeB.bind(this);
     this.setFilterFrq = this.setFilterFrq.bind(this);
     this.setFilterQ = this.setFilterQ.bind(this);
-    this.periodicWave = this.periodicWave.bind(this);
+    this.animate = this.animate.bind(this);
 
     this.setTypeLfo = this.setTypeLfo.bind(this);
     this.setFrqLfo = this.setFrqLfo.bind(this);
@@ -91,172 +91,394 @@ export default class NuTemplate extends NuBaseModule {
     this.sampleSpeed = this.sampleSpeed.bind(this);
     this.sampleLen = this.sampleLen.bind(this);
     this.sampleLoopRandIn = this.sampleLoopRandIn.bind(this);
+    this.animateLoop = this.animateLoop.bind(this);
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
     // setup receive callbacks
     this.e.receive('nuTemplate_methodTriggeredFromServer', this.methodTriggeredFromServer);
 
-    this.monoOsc = audioContext.createOscillator();
-    this.oscGain = audioContext.createGain();
-    this.filter = audioContext.createBiquadFilter();
+    this.monoOsc1 = audioContext.createOscillator();
     this.monoOsc2 = audioContext.createOscillator();
+    this.monoOsc3 = audioContext.createOscillator();
+    this.oscGain1 = audioContext.createGain();
     this.oscGain2 = audioContext.createGain();
+    this.oscGain3 = audioContext.createGain();
+    this.filter = audioContext.createBiquadFilter();
+    this.monoOscB1 = audioContext.createOscillator();
+    this.monoOscB2 = audioContext.createOscillator();
+    this.monoOscB3 = audioContext.createOscillator();
+    this.oscGainB1 = audioContext.createGain();
+    this.oscGainB2 = audioContext.createGain();
+    this.oscGainB3 = audioContext.createGain();
     this.lfo = audioContext.createOscillator();
     this.lfoGain = audioContext.createGain();
-	this.bufferSource = audioContext.createBufferSource();
+	  this.bufferSource = audioContext.createBufferSource();
     this.bufferGain = audioContext.createGain();
+    this.analyser =  audioContext.createAnalyser();
+
 
     // conenctions
-    this.monoOsc.connect(this.oscGain);
-    this.oscGain.connect(this.filter);
+    this.monoOsc1.connect(this.oscGain1);
     this.monoOsc2.connect(this.oscGain2);
+    this.monoOsc3.connect(this.oscGain3);
+    this.oscGain1.connect(this.filter);
     this.oscGain2.connect(this.filter);
-    this.filter.connect(this.e.nuOutput.in);
+    this.oscGain3.connect(this.filter);
+    this.monoOscB1.connect(this.oscGainB1);
+    this.monoOscB2.connect(this.oscGainB2);
+    this.monoOscB3.connect(this.oscGainB3);
+    this.oscGainB1.connect(this.filter);
+    this.oscGainB2.connect(this.filter);
+    this.oscGainB3.connect(this.filter);
+    this.filter.connect(this.analyser);
+    this.analyser.connect(this.e.nuOutput.in);
     this.lfo.connect(this.lfoGain);   
     this.bufferSource.connect(this.bufferGain);
     this.bufferGain.connect(this.filter);
  
     this.filter.type =  "lowpass";
-    this.monoOsc.type = 'square';
+    this.monoOsc1.type = 'square';
     this.monoOsc2.type = 'square';
-    this.oscGain.gain.value=this.params.gain;
-    this.oscGain2.gain.value=this.params.gain2;
-    this.isStarted = false;
+    this.monoOsc3.type = 'square';
+    this.monoOscB1.type = 'square';
+    this.monoOscB2.type = 'square';
+    this.monoOscB3.type = 'square';
+    this.oscGain1.gain.value=this.params.gain;
+    this.oscGain2.gain.value=this.params.gain;
+    this.oscGain3.gain.value=this.params.gain;
+    this.oscGainB1.gain.value=this.params.gainB;
+    this.oscGainB2.gain.value=this.params.gainB;
+    this.oscGainB3.gain.value=this.params.gainB;
+    this.isStarted1 = false;
+    this.isStarted2 = false;
+    this.isStarted3 = false;
     this.filter.frequency.value = this.params.frq;
     this.filter.Q.value = this.params.filterQ;
-    this.currOscFrq = 440.;
-    this.currOscType = 'square';
+    this.currOscFrq1 = 440.;
     this.currOscFrq2 = 440.;
-    this.currOscType2 = 'square';
+    this.currOscFrq3 = 440.;
+    this.currOscType = 'square';
+    this.currOscFrqB = 440.;
+    this.currOscTypeB = 'square';
     this.currentLfoType = 'square';
     this.currFilterFrq = 20000;
     this.currFilterQ = 1.;
-    this.currGain = this.params.gain;
-    this.currGain2 = this.params.gain2; 
+    this.currGain1 = this.params.gain;
+    this.currGain2 = this.params.gain;
+    this.currGain3 = this.params.gain;
+    this.currGainB = this.params.gainB; 
     this.currLfoFrq = 1.;
     this.currLfoGain = 0.;   
     this.glideTime = 0.1;
     this.isLfoActive = false;
-    this.tune2 = 0;
-    this.note = 60.0;
+    this.tuneDiff = 0;
     this.bufferSource.loop = false;
     this.bufferGain.gain.value = 1.;
- //   this.moveOffset = null;
-	this.sampleOffset = 0;
-	this.sampleLoopLen = 0.1;
+  	this.sampleOffset = 0;
+  	this.sampleLoopLen = 0.1;
+    this.animateOn = 0;
 
-    var real = new Float32Array(10);
-    var imag = new Float32Array(10);
-    real[0] = 0; imag[0] = 0; real[1] = 1; imag[1] = 0;  
-    this.wave = audioContext.createPeriodicWave(real, imag);
-
-//	    const canvas = document.getElementById('main-canvas');
-/*	    var canvas = document.createElement('canvas');
-	    this.ctx = canvas.getContext('2d');
-	    canvas.width = window.innerWidth;
-	    canvas.height = window.innerHeight;
-
-	    this.ctx.fillStyle = 'red';
-	    this.ctx.lineWidth = 0;
-	      	this.ctx.beginPath();
-	this.ctx.arc(100,300,50,0, Math.PI * 2);
-	this.ctx.closePath();
-	this.ctx.fill(); */
-
+  	this.touchType = 'none';
 
   }
 
 
   // trigger event directly from OSC client
-  startOsc(value){
-    if (value === 1 && this.isStarted == false) {
-      this.monoOsc2 = audioContext.createOscillator();
-      this.monoOsc2.frequency.value = this.currOscFrq2;
-      this.monoOsc = audioContext.createOscillator();
-      this.monoOsc.frequency.value = this.currOscFrq;
-      if (this.currOscType === 'custom') this.monoOsc.setPeriodicWave(this.wave);
-            else this.monoOsc.type = this.currOscType;
-      this.monoOsc2.type = this.currOscType2;      
-      this.monoOsc.connect(this.oscGain);
-      this.monoOsc2.connect(this.oscGain2);
-      this.oscGain.gain.value = this.currGain;
-      this.oscGain2.gain.value = this.currGain2;
-        
-      this.isStarted = true;
-      //this.monoOsc
-      this.monoOsc.start();
-      this.monoOsc2.start();
-    } else {
-      if (this.isStarted) {
-        this.currOscFrq = this.monoOsc.frequency.value;
-        this.currOscType = this.monoOsc.type;
-        this.currOscFrq2 = this.monoOsc2.frequency.value;
-        this.currOscType2 = this.monoOsc2.type;
-        this.currGain = this.oscGain.gain.value;
-        this.currGain2 = this.oscGain2.gain.value;
-        this.monoOsc.stop();
-        this.monoOsc2.stop();
-      }
-      this.isStarted = false;
+  startOsc(args){
+    let voice = args.shift();
+    let value = args.shift();
+
+    if(voice === 1)
+    {
+	    if (value === 1 && !this.isStarted1) {
+	      this.monoOsc1 = audioContext.createOscillator();
+	      this.monoOsc1.frequency.value = this.currOscFrq1;
+  		  this.monoOsc1.type = this.currOscType;
+        this.monoOscB1 = audioContext.createOscillator();
+        this.monoOscB1.type = this.currOscTypeB;     
+
+        var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.tuneDiff; 
+        this.monoOscB1.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
+	      this.monoOsc1.connect(this.oscGain1);
+	      this.monoOscB1.connect(this.oscGainB1);
+	      this.oscGain1.gain.value = this.currGain1;
+	      this.oscGainB1.gain.value = this.currGain1 * this.currGainB;
+	        
+	      this.isStarted1 = true;
+	      //this.monoOsc
+	      this.monoOsc1.start();
+	      this.monoOscB1.start();
+	    } 
+      if (value === 0 && this.isStarted1) {
+	        this.currOscFrq1 = this.monoOsc1.frequency.value;
+	        this.currOscType = this.monoOsc1.type;
+	        this.currOscTypeB = this.monoOscB1.type;
+	        this.currGain1 = this.oscGain1.gain.value;
+	        this.monoOsc1.stop();
+	        this.monoOscB1.stop();
+
+          this.isStarted1 = false;
+	     }
+	   }
+	
+    if(voice === 2)
+    {
+	    if (value === 1 && !this.isStarted2) {
+	      this.monoOsc2 = audioContext.createOscillator();
+	      this.monoOsc2.frequency.value = this.currOscFrq2;
+  		  this.monoOsc2.type = this.currOscType;
+        this.monoOscB2 = audioContext.createOscillator();
+        this.monoOscB2.type = this.currOscTypeB;
+
+        var tempNote = (69 + 12 * Math.log2(this.currOscFrq2/440)) + this.tuneDiff; 
+        this.monoOscB2.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
+	      this.monoOsc2.connect(this.oscGain2);
+	      this.monoOscB2.connect(this.oscGainB2);
+	      this.oscGain1.gain.value = this.currGain1;
+	      this.oscGainB2.gain.value = this.currGain2 * this.currGainB;
+	        
+	      this.isStarted2 = true;
+	      this.monoOsc2.start();
+	      this.monoOscB2.start();
+	    } 
+	     if (value === 0 && this.isStarted2) {
+	        this.currOscFrq2 = this.monoOsc2.frequency.value;
+	        this.currOscType = this.monoOsc2.type;
+	        this.currOscTypeB = this.monoOscB2.type;
+	        this.currGain2 = this.oscGain2.gain.value;
+	        this.monoOsc2.stop();
+	        this.monoOscB2.stop();
+ 
+         this.isStarted2 = false;
+	      }	    
+	   }
+
+    if(voice === 3)
+    {
+	    if (value === 1 && !this.isStarted3) {
+	      this.monoOsc3 = audioContext.createOscillator();
+	      this.monoOsc3.frequency.value = this.currOscFrq3;
+  		  this.monoOsc3.type = this.currOscType;
+        this.monoOscB3 = audioContext.createOscillator();
+
+        var tempNote = (69 + 12 * Math.log2(this.currOscFrq3/440)) + this.tuneDiff; 
+        this.monoOscB3.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
+	      this.monoOscB3.type = this.currOscTypeB;      
+	      this.monoOsc3.connect(this.oscGain3);
+	      this.monoOscB3.connect(this.oscGainB3);
+	      this.oscGain3.gain.value = this.currGain3;
+	      this.oscGainB3.gain.value = this.currGain3 * this.currGainB;
+	        
+	      this.isStarted3 = true;
+	      this.monoOsc3.start();
+	      this.monoOscB3.start();
+	    }
+	     if (value === 0 && this.isStarted3) {
+	        this.currOscFrq3 = this.monoOsc3.frequency.value;
+	        this.currOscType = this.monoOsc3.type;
+	        this.currOscTypeB = this.monoOscB3.type;
+	        this.currGain3 = this.oscGain3.gain.value;
+	        this.monoOsc3.stop();
+	        this.monoOscB3.stop();
+
+          this.isStarted3 = false;
+	     }  
+	   }
+  }
+
+  // trigger event directly from OSC client
+  setFrqOsc(args){
+    let voice = args.shift();
+    let value = args.shift();
+
+    if(voice===1 && this.isStarted1)
+    {
+        var tempPitch = this.monoOsc1.frequency.value;
+        var currentTime = audioContext.currentTime;
+        this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+        this.monoOsc1.frequency.setValueAtTime(tempPitch,currentTime);
+        this.monoOsc1.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+        var tempPitch2 = this.monoOscB1.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB1.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB1.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+    }
+    if(voice===2  && this.isStarted2)
+    {
+        var tempPitch = this.monoOsc2.frequency.value;
+        var currentTime = audioContext.currentTime;
+        this.monoOsc2.frequency.cancelScheduledValues(currentTime);
+        this.monoOsc2.frequency.setValueAtTime(tempPitch,currentTime);
+        this.monoOsc2.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+        var tempPitch2 = this.monoOscB2.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB2.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB2.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB2.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+    }
+    if(voice===3  && this.isStarted3)
+    {
+        var tempPitch = this.monoOsc3.frequency.value;
+        var currentTime = audioContext.currentTime;
+        this.monoOsc3.frequency.cancelScheduledValues(currentTime);
+        this.monoOsc3.frequency.setValueAtTime(tempPitch,currentTime);
+        this.monoOsc3.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+        var tempPitch2 = this.monoOscB3.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB3.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB3.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB3.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
     }
   }
 
   // trigger event directly from OSC client
-  setFrqOsc(value){
-  	  this.note = value;
-      var tempPitch = this.monoOsc.frequency.value;
-      var currentTime = audioContext.currentTime;
-//      var f1 = Math.pow(2.0, (value - 4) / 12.0);
-      this.monoOsc.frequency.cancelScheduledValues(currentTime);
-      this.monoOsc.frequency.setValueAtTime(tempPitch,currentTime);
-      this.monoOsc.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+  setTuneOscB(value){
+    this.tuneDiff = value;
 
-      var tempPitch2 = this.monoOsc2.frequency.value;
-//      var f2 = Math.pow(2.0, (value - 4 + this.tune2) / 12.0);
-      var f2 = value + this.tune2;
-      this.monoOsc2.frequency.cancelScheduledValues(currentTime);
-      this.monoOsc2.frequency.setValueAtTime(tempPitch2,currentTime);
-      this.monoOsc2.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
-  }
-  // trigger event directly from OSC client
-  setTuneOsc2(value){
-      var tempFrq2 = this.monoOsc2.frequency.value;
-      this.tune2 = value;
-      var tempFrq = this.monoOsc.frequency.value + value;
-      var currentTime = audioContext.currentTime;
-      this.monoOsc2.frequency.cancelScheduledValues(currentTime);
-      this.monoOsc2.frequency.setValueAtTime(tempFrq2,currentTime);
-      this.monoOsc2.frequency.linearRampToValueAtTime(tempFrq,currentTime+this.glideTime);
+    var currentTime = audioContext.currentTime;  
+    
+    if(this.isStarted1)
+    {
+        var tempPitch = this.monoOsc1.frequency.value;
+        var tempPitch2 = this.monoOscB1.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(tempPitch/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB1.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB1.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+    }
+    if(this.isStarted2)
+    {
+        var tempPitch = this.monoOsc2.frequency.value;
+        var tempPitch2 = this.monoOscB2.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(tempPitch/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB2.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB2.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB2.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+    }
+    if(this.isStarted3)
+    {
+        var tempPitch = this.monoOsc3.frequency.value;
+        var tempPitch2 = this.monoOscB3.frequency.value;
+        var tempNote = (69 + 12 * Math.log2(tempPitch/440)) + this.tuneDiff; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+        this.monoOscB3.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB3.frequency.setValueAtTime(tempPitch2,currentTime);
+        this.monoOscB3.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+    }
   }
 
-  setVolOsc(value){
-      var currGain = this.oscGain.gain.value; 
-      var currentTime = audioContext.currentTime;  
-      this.currGain = value;       
-      this.oscGain.gain.cancelScheduledValues(currentTime);
-      this.oscGain.gain.setValueAtTime(currGain,currentTime);
-      this.oscGain.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+  setVolOsc(args){
+      let voice = args.shift();
+      let value = args.shift();
+    
+      if(voice===1)
+      {
+          var currGain = this.oscGain1.gain.value; 
+          var currentTime = audioContext.currentTime;  
+          this.currGain1 = value;       
+          this.oscGain1.gain.cancelScheduledValues(currentTime);
+          this.oscGain1.gain.setValueAtTime(currGain,currentTime);
+          this.oscGain1.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+          var currGain2 = this.oscGainB1.gain.value; 
+          var nextGain = this.currGain1 * this.currGainB; 
+          var currentTime = audioContext.currentTime;  
+          this.currGain2 = value;       
+          this.oscGainB1.gain.cancelScheduledValues(currentTime);
+          this.oscGainB1.gain.setValueAtTime(currGain2,currentTime);
+          this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
+      }
+      if(voice===2)
+        {
+            var currGain = this.oscGain2.gain.value; 
+            var currentTime = audioContext.currentTime;  
+            this.currGain2 = value;       
+            this.oscGain2.gain.cancelScheduledValues(currentTime);
+            this.oscGain2.gain.setValueAtTime(currGain,currentTime);
+            this.oscGain2.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+            var currGain2 = this.oscGainB2.gain.value; 
+            var nextGain = this.currGain2 * this.currGainB; 
+            var currentTime = audioContext.currentTime;  
+            this.currGain2 = value;       
+            this.oscGainB2.gain.cancelScheduledValues(currentTime);
+            this.oscGainB2.gain.setValueAtTime(currGain2,currentTime);
+            this.oscGainB2.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
+        }
+      if(voice===3 && this.isStarted3)
+        {
+            var currGain = this.oscGain3.gain.value; 
+            var currentTime = audioContext.currentTime;  
+            this.currGain3 = value;       
+            this.oscGain3.gain.cancelScheduledValues(currentTime);
+            this.oscGain3.gain.setValueAtTime(currGain,currentTime);
+            this.oscGain3.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+
+            var currGain2 = this.oscGainB3.gain.value; 
+            var nextGain = this.currGain3 * this.currGainB; 
+            var currentTime = audioContext.currentTime;  
+            this.currGain2 = value;       
+            this.oscGainB3.gain.cancelScheduledValues(currentTime);
+            this.oscGainB3.gain.setValueAtTime(currGain2,currentTime);
+            this.oscGainB3.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
+        }
   }
-  setVolOsc2(value){
-      var currGain2 = this.oscGain2.gain.value; 
+  setVolOscB(value){
+    this.currGainB = value;
+
+   if (this.isStarted1)
+   {
+      var currGain2 = this.oscGainB1.gain.value; 
+      var nextGain = this.oscGain1.gain.value * this.currGainB; 
       var currentTime = audioContext.currentTime;  
       this.currGain2 = value;       
-      this.oscGain2.gain.cancelScheduledValues(currentTime);
-      this.oscGain2.gain.setValueAtTime(currGain2,currentTime);
-      this.oscGain2.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+      this.oscGainB1.gain.cancelScheduledValues(currentTime);
+      this.oscGainB1.gain.setValueAtTime(currGain2,currentTime);
+      this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
+    }
+   if (this.isStarted2)
+   {
+      var currGain2 = this.oscGainB2.gain.value; 
+      var nextGain = this.oscGain2.gain.value * this.currGainB; 
+      var currentTime = audioContext.currentTime;  
+      this.currGain2 = value;       
+      this.oscGainB2.gain.cancelScheduledValues(currentTime);
+      this.oscGainB2.gain.setValueAtTime(currGain2,currentTime);
+      this.oscGainB2.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+    }
+   if (this.isStarted1)
+   {
+      var currGain2 = this.oscGainB3.gain.value; 
+      var nextGain = this.oscGain3.gain.value * this.currGainB; 
+      var currentTime = audioContext.currentTime;  
+      this.currGain2 = value;       
+      this.oscGainB3.gain.cancelScheduledValues(currentTime);
+      this.oscGainB3.gain.setValueAtTime(currGain2,currentTime);
+      this.oscGainB3.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+    }
   }
  
   synthType(type){
     this.currentOsctype = type;
-    if( this.type === 'custom' )
-        this.monoOsc.setPeriodicWave(this.wave);
-      else
-        this.monoOsc.type = type; 
+    if (this.isStarted1) this.monoOsc1.type = type; 
+    if (this.isStarted2) this.monoOsc2.type = type; 
+    if (this.isStarted3) this.monoOsc3.type = type; 
   }
-  synthType2(type){
-    this.currentOsctype2 = type;
-    this.monoOsc2.type = type; 
+  synthTypeB(type){
+    this.currentOsctypeB = type;
+    if (this.isStarted1) this.monoOscB1.type = type; 
+    if (this.isStarted2) this.monoOscB2.type = type; 
+    if (this.isStarted3) this.monoOscB3.type = type; 
   }
 
  setFilterFrq(value){
@@ -278,18 +500,46 @@ export default class NuTemplate extends NuBaseModule {
   }
 
   // define synth waveform
-  periodicWave(args){
-    let halfLength = Math.floor(args.length/2);
-    var real = new Float32Array(halfLength);
-    var imag = new Float32Array(halfLength);    
-    for (let i = 0; i < args.length/2; i++) {
-      real[i] = args[2*i];
-      imag[i] = args[2*i+1];
-    }
-    this.wave=audioContext.createPeriodicWave(real, imag);
-    this.monoOsc.setPeriodicWave(this.wave);
+  animate(value){
+    this.animateOn = value;
+    this.animateLoop();
+
   }
 
+  animateLoop()
+  {
+      const canvas = document.getElementById('main-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      var risingEdge = 0;
+      var edgeThreshold =5;
+      var scaling = canvas.height / 256;
+      var timeData = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteTimeDomainData(timeData);
+ 
+        //ctx.fillStyle = 'red';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+      //  ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
+      while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
+      while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
+
+      for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
+        ctx.lineTo(x - risingEdge, canvas.height - timeData[x] * scaling);
+        //ctx.closePath();
+        //ctx.fill();
+        ctx.stroke();
+
+      if(this.animateOn == 1) 
+        requestAnimationFrame(this.animateLoop);
+      else
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+  }
 
   setFunctionLfo(value){
     
@@ -303,7 +553,9 @@ export default class NuTemplate extends NuBaseModule {
               this.lfo.connect(this.lfoGain);
               this.lfo.frequency.value = this.currLfoFrq;
               this.lfoGain.gain.value = this.currLfoGain;
-              this.lfoGain.connect(this.oscGain.gain); 
+              if (this.isStarted1) this.lfoGain.connect(this.oscGain1.gain); 
+              if (this.isStarted2) this.lfoGain.connect(this.oscGain2.gain); 
+              if (this.isStarted3) this.lfoGain.connect(this.oscGain3.gain); 
               this.lfo.start();
               this.isLfoActive = true;
       } else
@@ -313,7 +565,9 @@ export default class NuTemplate extends NuBaseModule {
               this.lfo.connect(this.lfoGain);
               this.lfo.frequency.value = this.currLfoFrq;
               this.lfoGain.gain.value = this.currLfoGain;
-              this.lfoGain.connect(this.monoOsc.frequency); 
+              if (this.isStarted1) this.lfoGain.connect(this.monoOsc1.frequency); 
+              if (this.isStarted2) this.lfoGain.connect(this.monoOsc2.frequency); 
+              if (this.isStarted3) this.lfoGain.connect(this.monoOsc3.frequency); 
               this.lfo.start();
               this.isLfoActive = true;
       } else
@@ -324,16 +578,6 @@ export default class NuTemplate extends NuBaseModule {
               this.lfo.frequency.value = this.currLfoFrq;
               this.lfoGain.gain.value = this.currLfoGain;
               this.lfoGain.connect(this.filter.frequency); 
-              this.lfo.start();
-              this.isLfoActive = true;
-      } else
-      if (value === 'FM') {
-    		if(this.isLfoActive == true) this.lfo.stop();
-              this.lfo = audioContext.createOscillator();
-              this.lfo.connect(this.lfoGain);
-              this.lfo.frequency.value = this.currLfoFrq;
-              this.lfoGain.gain.value = this.currLfoGain;
-              this.lfoGain.connect(this.monoOsc.frequency); 
               this.lfo.start();
               this.isLfoActive = true;
       } 
@@ -383,7 +627,7 @@ export default class NuTemplate extends NuBaseModule {
   }
 
   sampleVol(value){
-      var currGain = this.oscGain.gain.value; 
+      var currGain = this.bufferGain.gain.value; 
       var currentTime = audioContext.currentTime;  
       this.bufferGain.gain.cancelScheduledValues(currentTime);
       this.bufferGain.gain.setValueAtTime(currGain,currentTime);
@@ -434,7 +678,7 @@ export default class NuTemplate extends NuBaseModule {
 
   touchStartCallback(id, normX, normY){
     // notify touch on
-    this.e.send('osc', '/' + this.moduleName, ['touchOn', 1] );
+    //this.e.send('osc', '/' + this.moduleName, ['touchOn', 1] );
     // common touch callback
     this.touchCommonCallback(id, normX, normY);      
   }
@@ -446,79 +690,128 @@ export default class NuTemplate extends NuBaseModule {
 
   touchEndCallback(id, normX, normY){
     // notify touch off
-    this.e.send('osc', '/' + this.moduleName, ['touchOn', 0] );
+    //this.e.send('osc', '/' + this.moduleName, ['touchOn', 0] );
     // common touch callback
     this.touchCommonCallback(id, normX, normY);      
   }  
 
-   touchCommonCallback(id, normX, normY){
+  touchCommonCallback(id, normX, normY){
     // ATTEMPT AT CROSSMODULE POSTING: FUNCTIONAL BUT ORIGINAL USE NO LONGER CONSIDERED: TODELETE WHEN CONFIRMED
     // window.postMessage(['nuRenderer', 'touch', id, normX, normY], location.origin);
     // ----------
     // send touch pos
-    this.e.send('osc', '/' + this.moduleName, ['touchPos', id, normX, normY]);
-    this.sampleVol(normY);
-    this.sampleLoopIn(normX);
-    this.sampleLoopOut(normX+this.sampleLoopLen);
-    //drawCircle(normX,normY);
+    //this.e.send('osc', '/' + this.moduleName, ['touchPos', id, normX, normY]);
+ 	    
+     	const canvas = document.getElementById('main-canvas');
+    	const ctx = canvas.getContext('2d');
+    	canvas.width = window.innerWidth;
+    	canvas.height = window.innerHeight;
 
-    const canvas = document.getElementById('main-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+ /*     var risingEdge = 0;
+      var edgeThreshold =5;
+      var scaling = canvas.height / 256;
+      var timeData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteTimeDomainData(timeData);
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
+      while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
 
-    //ctx.fillStyle = 'red';
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
-    ctx.closePath();
-    //ctx.fill();
-    ctx.stroke();
+      for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
+        ctx.lineTo(x - risingEdge, canvas.height - timedata[x] * scaling);
+      ctx.stroke();*/
+
+      if(this.touchType == 'loop')
+      {
+  	    this.sampleVol(normY);
+  	    this.sampleLoopIn(normX);
+  	    this.sampleLoopOut(normX+this.sampleLoopLen);
+
+      var risingEdge = 0;
+      var edgeThreshold =5;
+      var scaling = canvas.height / 256;
+      var timeData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteTimeDomainData(timeData);
+ 
+  	    //ctx.fillStyle = 'red';
+  	    ctx.strokeStyle = 'white';
+  	    ctx.lineWidth = 2;
+  	    ctx.beginPath();
+  	    ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
+      while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
+      while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
+      if (risingEdge >= canvas.width) risingEdge =0;
+
+      for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
+        ctx.lineTo(x - risingEdge, canvas.height - timedata[x] * scaling);
+  	    ctx.closePath();
+  	    //ctx.fill();
+  	    ctx.stroke();
+ 
+    	}
+      if(this.touchType == 'synth')
+      {
+        console.log('synth draw');
+ 
+
+      }
+      if(this.touchType == 'none')
+    	{
+    		ctx.clearRect(0,0,canvas.width, canvas.height);
+    	}
 
   }
 
    // Note: hereafter are the OSC triggered functions used to enable / disable 
   // hereabove callbacks
 
-  touch(onOff){
+  touch(value){
+  	var onOff = false;
+  	this.touchType = value;
 
- // 	let str = this.formatText("0");
- //   document.getElementById('text1').innerHTML = str;
+   	if(value == 'none')
+   	{
+   		onOff = false;
+   		const canvas = document.getElementById('main-canvas');
+  		const ctx = canvas.getContext('2d');
+  		canvas.width = window.innerWidth;
+  		canvas.height = window.innerHeight;
+  		ctx.clearRect(0,0,canvas.width, canvas.height);
+   	}
+   	if(value === 'loop'){
+   		onOff = true;
 
+   		const canvas = document.getElementById('main-canvas');
+  		const ctx = canvas.getContext('2d');
+  		canvas.width = window.innerWidth;
+  		canvas.height = window.innerHeight;
+  	    ctx.strokeStyle = 'white';
+  	    ctx.lineWidth = 2;
+  	    ctx.beginPath();
+  	    ctx.arc(0.5*window.innerWidth,0.5*window.innerHeight,50,0, Math.PI * 2, true);
+  	    ctx.closePath();
+  	    //ctx.fill();
+  	    ctx.stroke();
+   	}
 
-    // enable if not already enabled
+      // enable if not already enabled
     if( onOff && !this.callBackStatus.touch ){
-      this.surface.addListener('touchstart', this.touchStartCallback);
-      this.surface.addListener('touchmove', this.touchMoveCallback);
-      this.surface.addListener('touchend', this.touchEndCallback);
-      this.callBackStatus.touch = true;
-
-
+        this.surface.addListener('touchstart', this.touchStartCallback);
+        this.surface.addListener('touchmove', this.touchMoveCallback);
+        this.surface.addListener('touchend', this.touchEndCallback);
+        this.callBackStatus.touch = true;
     }
-    // disable if not already disabled
+      // disable if not already disabled
     if( !onOff && this.callBackStatus.touch ){
-      this.surface.removeListener('touchstart', this.touchStartCallback);
-      this.surface.removeListener('touchmove', this.touchMoveCallback);
-      this.surface.removeListener('touchend', this.touchEndCallback);
-      this.callBackStatus.touch = false;
+        this.surface.removeListener('touchstart', this.touchStartCallback);
+        this.surface.removeListener('touchmove', this.touchMoveCallback);
+        this.surface.removeListener('touchend', this.touchEndCallback);
+        this.callBackStatus.touch = false;
     }
-  }
-
-    // defined text (on top of the player's screen) from OSC client (header)
-  drawCircle(x, y){
- 	const canvas = document.getElementById('main-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    ctx.fillStyle = 'red';
-    ctx.lineWidth = 0;
-    ctx.beginPath();
-    ctx.arc(100+(x*10),300+(y*10),50,0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();
-
   }
 
   // re-routed event for sync. playback: server add a rdv time to msg sent by OSC client
