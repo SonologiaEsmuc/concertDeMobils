@@ -67,7 +67,7 @@ export default class NuTemplate extends NuBaseModule {
 
     // binding
     this.directToClientMethod = this.directToClientMethod.bind(this);
-    this.startOsc = this.startOsc.bind(this);
+    this.startOsc = this.startOsc.bind(this); 
     this.setFrqOsc = this.setFrqOsc.bind(this);
     this.setVolOsc = this.setVolOsc.bind(this);
     this.synthType = this.synthType.bind(this);
@@ -76,7 +76,7 @@ export default class NuTemplate extends NuBaseModule {
     this.synthTypeB = this.synthTypeB.bind(this);
     this.setFilterFrq = this.setFilterFrq.bind(this);
     this.setFilterQ = this.setFilterQ.bind(this);
-    this.animate = this.animate.bind(this);
+    this.animate = this.animate.bind(this); // activate waveform animation
 
     this.setTypeLfo = this.setTypeLfo.bind(this);
     this.setFrqLfo = this.setFrqLfo.bind(this);
@@ -91,31 +91,31 @@ export default class NuTemplate extends NuBaseModule {
     this.sampleSpeed = this.sampleSpeed.bind(this);
     this.sampleLen = this.sampleLen.bind(this);
     this.sampleLoopRandIn = this.sampleLoopRandIn.bind(this);
-    this.animateLoop = this.animateLoop.bind(this);
+    this.animateLoop = this.animateLoop.bind(this); // every frame loop animation
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
     // setup receive callbacks
     this.e.receive('nuTemplate_methodTriggeredFromServer', this.methodTriggeredFromServer);
 
-    this.monoOsc1 = audioContext.createOscillator();
-    this.monoOsc2 = audioContext.createOscillator();
+    this.monoOsc1 = audioContext.createOscillator();  // oscillator voice1
+    this.monoOsc2 = audioContext.createOscillator();  
     this.monoOsc3 = audioContext.createOscillator();
-    this.oscGain1 = audioContext.createGain();
+    this.oscGain1 = audioContext.createGain(); // gain oscillator voice1
     this.oscGain2 = audioContext.createGain();
     this.oscGain3 = audioContext.createGain();
     this.filter = audioContext.createBiquadFilter();
-    this.monoOscB1 = audioContext.createOscillator();
+    this.monoOscB1 = audioContext.createOscillator(); // extra oscillator voice1
     this.monoOscB2 = audioContext.createOscillator();
     this.monoOscB3 = audioContext.createOscillator();
-    this.oscGainB1 = audioContext.createGain();
+    this.oscGainB1 = audioContext.createGain();	// gain extra oscillator voice1
     this.oscGainB2 = audioContext.createGain();
     this.oscGainB3 = audioContext.createGain();
     this.lfo = audioContext.createOscillator();
     this.lfoGain = audioContext.createGain();
 	  this.bufferSource = audioContext.createBufferSource();
     this.bufferGain = audioContext.createGain();
-    this.analyser =  audioContext.createAnalyser();
+    this.analyser =  audioContext.createAnalyser(); // analyser for waveform animation
 
 
     // conenctions
@@ -150,7 +150,7 @@ export default class NuTemplate extends NuBaseModule {
     this.oscGainB1.gain.value=this.params.gainB;
     this.oscGainB2.gain.value=this.params.gainB;
     this.oscGainB3.gain.value=this.params.gainB;
-    this.isStarted1 = false;
+    this.isStarted1 = false;  // osc voice1 is started?
     this.isStarted2 = false;
     this.isStarted3 = false;
     this.filter.frequency.value = this.params.frq;
@@ -160,6 +160,9 @@ export default class NuTemplate extends NuBaseModule {
     this.currOscFrq3 = 440.;
     this.currOscType = 'square';
     this.currOscFrqB = 440.;
+
+	this.OscFrqTouchOffset = 0; // freq touch deviation
+
     this.currOscTypeB = 'square';
     this.currentLfoType = 'square';
     this.currFilterFrq = 20000;
@@ -171,13 +174,20 @@ export default class NuTemplate extends NuBaseModule {
     this.currLfoFrq = 1.;
     this.currLfoGain = 0.;   
     this.glideTime = 0.1;
-    this.isLfoActive = false;
-    this.tuneDiff = 0;
+    this.lfoFunction = 'none';
+    this.tuneDiff = 0; //extra Osc tune difference from osc
     this.bufferSource.loop = false;
     this.bufferGain.gain.value = 1.;
   	this.sampleOffset = 0;
   	this.sampleLoopLen = 0.1;
     this.animateOn = 0;
+    this.touchX=0.5;
+    this.touchY=0.5;
+    this.touchX_last =0.5;
+    this.touchY_last = 0.5;
+    this.colorsR=255;
+    this.colorsG=0;
+    this.colorsB=0;
 
   	this.touchType = 'none';
 
@@ -291,6 +301,8 @@ export default class NuTemplate extends NuBaseModule {
   setFrqOsc(args){
     let voice = args.shift();
     let value = args.shift();
+
+	this.OscFrqTouchOffset = 0;
 
     if(voice===1 && this.isStarted1)
     {
@@ -519,11 +531,70 @@ export default class NuTemplate extends NuBaseModule {
       var timeData = new Uint8Array(this.analyser.frequencyBinCount);
       this.analyser.getByteTimeDomainData(timeData);
  
-        //ctx.fillStyle = 'red';
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2;
+ 	// backgroundColor
+ 	  ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+	  ctx.fillStyle = 'white';
+	  ctx.strokeStyle = 'white';
+	  ctx.lineWidth = 2;
+      
+    	if(this.touchType == 'loop')
+    	{
+	       	ctx.beginPath();
+	  	    ctx.arc(this.touchX*window.innerWidth,this.touchY*window.innerHeight,50,0, Math.PI * 2, true);
+	  	    ctx.closePath();
+	        ctx.stroke();
+
+	  	    ctx.font = '15px Quicksand-Light';
+	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
+	        	ctx.fillText('mou me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchX < this.touchX_last)	        	
+	        	ctx.fillText('<- loop CURT', (this.touchX-0.2)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchX > this.touchX_last)	        	
+	        	ctx.fillText('loop LLARG ->', (this.touchX+0.1)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchY < this.touchY_last)	        	
+	        	ctx.fillText('+ to', (this.touchX)*window.innerWidth, (this.touchY-0.1)*window.innerHeight);
+	        if(this.touchY > this.touchY_last)	        	
+	        	ctx.fillText('- to', (this.touchX)*window.innerWidth, (this.touchY+0.1)*window.innerHeight);
+	    
+	        this.touchX_last = this.touchX;
+	        this.touchY_last = this.touchY;
+
+
+	    }
+
+    	if(this.touchType == 'synth')
+    	{
+	       	ctx.beginPath();
+	  	    ctx.arc(this.touchX*window.innerWidth,this.touchY*window.innerHeight,50,0, Math.PI * 2, true);
+	  	    ctx.closePath();
+	        ctx.stroke();
+
+	  	    ctx.font = '15px sans-serif';
+	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
+	        	ctx.fillText('mou-me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchX < this.touchX_last)	        	
+	        	ctx.fillText('<- DESAFINA', (this.touchX-0.2)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchX > this.touchX_last)	        	
+	        	ctx.fillText('DESAFINA ->', (this.touchX+0.1)*window.innerWidth, this.touchY*window.innerHeight);
+	        if(this.touchY < this.touchY_last)	        	
+	        	ctx.fillText('BATIMENTS', (this.touchX-0.05)*window.innerWidth, (this.touchY-0.1)*window.innerHeight);
+	        if(this.touchY > this.touchY_last)	        	
+	        	ctx.fillText('BATIMENTS', (this.touchX-0.05)*window.innerWidth, (this.touchY+0.1)*window.innerHeight);
+	    
+	        this.touchX_last = this.touchX;
+	        this.touchY_last = this.touchY;
+
+	        if(this.isStarted1)
+	        {
+	        	// log oscFrqTouchOffset
+	        	//ctx.fillText(this.OscFrqTouchOffset , 0.1*window.innerWidth, 0.1*window.innerHeight);
+	    	}
+	    }
+
+	    // DRAW WAVEFORM
         ctx.beginPath();
-      //  ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
       while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
       if (risingEdge >= canvas.width) risingEdge =0;
       while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
@@ -531,8 +602,6 @@ export default class NuTemplate extends NuBaseModule {
 
       for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
         ctx.lineTo(x - risingEdge, canvas.height - timeData[x] * scaling);
-        //ctx.closePath();
-        //ctx.fill();
         ctx.stroke();
 
       if(this.animateOn == 1) 
@@ -543,12 +612,14 @@ export default class NuTemplate extends NuBaseModule {
 
   setFunctionLfo(value){
     
-      if (value === 'none' && this.isLfoActive == true) {
+      if (value === 'none' && this.lfoFunction != 'none') {
         this.lfo.stop();
-        this.isLfoActive = false;
+    	this.lfoGain.disconnect();
+        this.lfoFunction = value;
       } else 
       if (value === 'tremolo') {
-    		if(this.isLfoActive == true) this.lfo.stop();
+    		if(this.lfoFunction != 'none') this.lfo.stop();
+    		  this.lfoGain.disconnect();
               this.lfo = audioContext.createOscillator();
               this.lfo.connect(this.lfoGain);
               this.lfo.frequency.value = this.currLfoFrq;
@@ -557,10 +628,11 @@ export default class NuTemplate extends NuBaseModule {
               if (this.isStarted2) this.lfoGain.connect(this.oscGain2.gain); 
               if (this.isStarted3) this.lfoGain.connect(this.oscGain3.gain); 
               this.lfo.start();
-              this.isLfoActive = true;
+              this.lfoFunction = value;
       } else
       if (value === 'vibrato') {
-    		if(this.isLfoActive == true) this.lfo.stop();
+    		if(this.lfoFunction != 'none') this.lfo.stop();
+    		  this.lfoGain.disconnect();
               this.lfo = audioContext.createOscillator();
               this.lfo.connect(this.lfoGain);
               this.lfo.frequency.value = this.currLfoFrq;
@@ -569,17 +641,18 @@ export default class NuTemplate extends NuBaseModule {
               if (this.isStarted2) this.lfoGain.connect(this.monoOsc2.frequency); 
               if (this.isStarted3) this.lfoGain.connect(this.monoOsc3.frequency); 
               this.lfo.start();
-              this.isLfoActive = true;
+              this.lfoFunction = value;
       } else
       if (value === 'filter') {
-    		if(this.isLfoActive == true) this.lfo.stop();
+    		if(this.lfoFunction != 'none') this.lfo.stop();
+    		  this.lfoGain.disconnect();
               this.lfo = audioContext.createOscillator();
               this.lfo.connect(this.lfoGain);
               this.lfo.frequency.value = this.currLfoFrq;
               this.lfoGain.gain.value = this.currLfoGain;
               this.lfoGain.connect(this.filter.frequency); 
               this.lfo.start();
-              this.isLfoActive = true;
+              this.lfoFunction = value;
       } 
   }
   setAmpLfo(value){
@@ -692,78 +765,48 @@ export default class NuTemplate extends NuBaseModule {
     // notify touch off
     //this.e.send('osc', '/' + this.moduleName, ['touchOn', 0] );
     // common touch callback
-    this.touchCommonCallback(id, normX, normY);      
+    this.touchCommonCallback(id, normX, normY);    
   }  
 
   touchCommonCallback(id, normX, normY){
-    // ATTEMPT AT CROSSMODULE POSTING: FUNCTIONAL BUT ORIGINAL USE NO LONGER CONSIDERED: TODELETE WHEN CONFIRMED
-    // window.postMessage(['nuRenderer', 'touch', id, normX, normY], location.origin);
-    // ----------
-    // send touch pos
-    //this.e.send('osc', '/' + this.moduleName, ['touchPos', id, normX, normY]);
  	    
-     	const canvas = document.getElementById('main-canvas');
-    	const ctx = canvas.getContext('2d');
-    	canvas.width = window.innerWidth;
-    	canvas.height = window.innerHeight;
+ 	    this.touchX = normX;
+ 	    this.touchY = normY;
 
- /*     var risingEdge = 0;
-      var edgeThreshold =5;
-      var scaling = canvas.height / 256;
-      var timeData = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteTimeDomainData(timeData);
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
-      if (risingEdge >= canvas.width) risingEdge =0;
-      while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
-      if (risingEdge >= canvas.width) risingEdge =0;
-
-      for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
-        ctx.lineTo(x - risingEdge, canvas.height - timedata[x] * scaling);
-      ctx.stroke();*/
 
       if(this.touchType == 'loop')
       {
-  	    this.sampleVol(normY);
-  	    this.sampleLoopIn(normX);
-  	    this.sampleLoopOut(normX+this.sampleLoopLen);
+  	    //this.sampleVol(normY);
+        this.sampleSpeed((1-normY)*2.);
+  	    //this.sampleLoopIn(normX);
+  	    this.sampleLoopOut(normX);
 
-      var risingEdge = 0;
-      var edgeThreshold =5;
-      var scaling = canvas.height / 256;
-      var timeData = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteTimeDomainData(timeData);
- 
-  	    //ctx.fillStyle = 'red';
-  	    ctx.strokeStyle = 'white';
-  	    ctx.lineWidth = 2;
-  	    ctx.beginPath();
-  	    ctx.arc(normX*window.innerWidth,normY*window.innerHeight,50,0, Math.PI * 2, true);
-      while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
-      if (risingEdge >= canvas.width) risingEdge =0;
-      while (timeData[risingEdge++] -128 < edgeThreshold && risingEdge <= canvas.width);
-      if (risingEdge >= canvas.width) risingEdge =0;
+	   	}
 
-      for(var x = risingEdge; x < timeData.length && x - risingEdge < canvas.width; x++)
-        ctx.lineTo(x - risingEdge, canvas.height - timedata[x] * scaling);
-  	    ctx.closePath();
-  	    //ctx.fill();
-  	    ctx.stroke();
- 
-    	}
       if(this.touchType == 'synth')
       {
-        console.log('synth draw');
- 
+      	this.OscFrqTouchOffset = (this.touchX-0.5)*2.0;
 
-      }
-      if(this.touchType == 'none')
-    	{
-    		ctx.clearRect(0,0,canvas.width, canvas.height);
-    	}
+		var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.OscFrqTouchOffset; 
+		var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+		var currentTime = audioContext.currentTime;
+//		this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+		this.monoOsc1.frequency.setValueAtTime(f2,currentTime);
+//		this.monoOsc1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+//		this.currOscFrq1 = this.monoOsc1.frequency.value;
 
+/*      	if(this.lfoFunction != 'tremolo')
+      		this.setFunctionLfo('tremolo');
+      	if(normY<0.5){
+      	  this.setFrqLfo((0.5-normY)*15.0);
+      	  this.setAmpLfo(0.5);
+      	}
+      	else
+      	  this.setAmpLfo(0.);     		
+      }*/
+
+        this.setVolOscB((0.5-normY)*2.);
+    }
   }
 
    // Note: hereafter are the OSC triggered functions used to enable / disable 
@@ -773,30 +816,8 @@ export default class NuTemplate extends NuBaseModule {
   	var onOff = false;
   	this.touchType = value;
 
-   	if(value == 'none')
-   	{
-   		onOff = false;
-   		const canvas = document.getElementById('main-canvas');
-  		const ctx = canvas.getContext('2d');
-  		canvas.width = window.innerWidth;
-  		canvas.height = window.innerHeight;
-  		ctx.clearRect(0,0,canvas.width, canvas.height);
-   	}
-   	if(value === 'loop'){
+   	if(value === 'loop' || value =='synth')
    		onOff = true;
-
-   		const canvas = document.getElementById('main-canvas');
-  		const ctx = canvas.getContext('2d');
-  		canvas.width = window.innerWidth;
-  		canvas.height = window.innerHeight;
-  	    ctx.strokeStyle = 'white';
-  	    ctx.lineWidth = 2;
-  	    ctx.beginPath();
-  	    ctx.arc(0.5*window.innerWidth,0.5*window.innerHeight,50,0, Math.PI * 2, true);
-  	    ctx.closePath();
-  	    //ctx.fill();
-  	    ctx.stroke();
-   	}
 
       // enable if not already enabled
     if( onOff && !this.callBackStatus.touch ){
