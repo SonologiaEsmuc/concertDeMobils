@@ -91,6 +91,8 @@ export default class NuTemplate extends NuBaseModule {
     this.sampleSpeed = this.sampleSpeed.bind(this);
     this.sampleLen = this.sampleLen.bind(this);
     this.sampleLoopRandIn = this.sampleLoopRandIn.bind(this);
+    this.convolverVol = this.convolverVol.bind(this); // convolution volume
+    this.convolverIR = this.convolverIR.bind(this); // convolution volume
     this.animateLoop = this.animateLoop.bind(this); // every frame loop animation
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
@@ -116,7 +118,8 @@ export default class NuTemplate extends NuBaseModule {
 	  this.bufferSource = audioContext.createBufferSource();
     this.bufferGain = audioContext.createGain();
     this.analyser =  audioContext.createAnalyser(); // analyser for waveform animation
-
+    this.convolver = audioContext.createConvolver();
+	this.convolverGain = audioContext.createGain();
 
     // conenctions
     this.monoOsc1.connect(this.oscGain1);
@@ -136,7 +139,10 @@ export default class NuTemplate extends NuBaseModule {
     this.lfo.connect(this.lfoGain);   
     this.bufferSource.connect(this.bufferGain);
     this.bufferGain.connect(this.filter);
- 
+    this.filter.connect(this.convolver);
+    this.convolver.connect(this.convolverGain);
+    this.convolverGain.connect(this.e.nuOutput.in);
+
     this.filter.type =  "lowpass";
     this.monoOsc1.type = 'square';
     this.monoOsc2.type = 'square';
@@ -178,7 +184,8 @@ export default class NuTemplate extends NuBaseModule {
     this.tuneDiff = 0; //extra Osc tune difference from osc
     this.bufferSource.loop = false;
     this.bufferGain.gain.value = 1.;
-  	this.sampleOffset = 0;
+    this.convolverGain.gain.value = 1.;
+    this.sampleOffset = 0;
   	this.sampleLoopLen = 0.1;
     this.animateOn = 0;
     this.touchX=0.5;
@@ -191,6 +198,8 @@ export default class NuTemplate extends NuBaseModule {
 
   	this.touchType = 'none';
 
+  	const audioBuffer = this.e.loader.data['ElyChapel'];
+    this.convolver.buffer = audioBuffer;
   }
 
 
@@ -747,6 +756,23 @@ export default class NuTemplate extends NuBaseModule {
   sampleSpeed(value) {
   	this.bufferSource.playbackRate.value = value;
   	console.log('speed');
+  }
+
+  convolverVol(value){
+  	console.log('convVol');
+
+      var currGain = this.convolverGain.gain.value; 
+      var currentTime = audioContext.currentTime; 
+      this.convolverGain.gain.cancelScheduledValues(currentTime);
+      this.convolverGain.gain.setValueAtTime(currGain,currentTime);
+      this.convolverGain.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+  }
+
+  convolverIR(value){
+  	console.log('convIR');
+   	const audioBuffer = this.e.loader.data[value];
+    this.convolver.buffer = audioBuffer;
+
   }
 
   touchStartCallback(id, normX, normY){
