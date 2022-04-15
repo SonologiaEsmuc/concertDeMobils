@@ -93,6 +93,8 @@ export default class NuTemplate extends NuBaseModule {
     this.sampleLoopRandIn = this.sampleLoopRandIn.bind(this);
     this.convolverVol = this.convolverVol.bind(this); // convolution volume
     this.convolverIR = this.convolverIR.bind(this); // convolution volume
+    this.delayFbk = this.delayFbk.bind(this); // delay feedback gain
+    this.delayTime = this.delayTime.bind(this); // delay time
     this.animateLoop = this.animateLoop.bind(this); // every frame loop animation
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
@@ -120,6 +122,10 @@ export default class NuTemplate extends NuBaseModule {
     this.analyser =  audioContext.createAnalyser(); // analyser for waveform animation
     this.convolver = audioContext.createConvolver();
 	this.convolverGain = audioContext.createGain();
+	this.convolverGainToDelay = audioContext.createGain();
+    this.delay = audioContext.createDelay();
+	this.delayGain = audioContext.createGain();
+	this.delayGainOwn = audioContext.createGain();
 
     // conenctions
     this.monoOsc1.connect(this.oscGain1);
@@ -141,7 +147,14 @@ export default class NuTemplate extends NuBaseModule {
     this.bufferGain.connect(this.filter);
     this.filter.connect(this.convolver);
     this.convolver.connect(this.convolverGain);
+    this.convolver.connect(this.convolverGainToDelay);
     this.convolverGain.connect(this.e.nuOutput.in);
+    this.delay.connect(this.delayGain);
+    this.delay.connect(this.delayGainOwn);
+    this.convolverGainToDelay.connect(this.delay);
+    this.delayGain.connect(this.convolver);
+    this.delayGainOwn.connect(this.delay);
+    this.filter.connect(this.delay);
 
     this.filter.type =  "lowpass";
     this.monoOsc1.type = 'square';
@@ -177,6 +190,7 @@ export default class NuTemplate extends NuBaseModule {
     this.currGain2 = this.params.gain;
     this.currGain3 = this.params.gain;
     this.currGainB = this.params.gainB; 
+    this.currGainB1 = 0.;
     this.currLfoFrq = 1.;
     this.currLfoGain = 0.;   
     this.glideTime = 0.1;
@@ -192,14 +206,20 @@ export default class NuTemplate extends NuBaseModule {
     this.touchY=0.5;
     this.touchX_last =0.5;
     this.touchY_last = 0.5;
+    this.isTouching = false;
     this.colorsR=255;
     this.colorsG=0;
     this.colorsB=0;
-
+    this.circleTouchPosX = 0.5;
+    this.circleTouchPosY = 0.5;
   	this.touchType = 'none';
+	this.FilterFrqTouchOffset = 0.;
+	this.delayGain.gain.value = 0;
+	this.convolverGainToDelay.gain.value = 0.1;
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
+    this.filter.frequency.setValueAtTime(20000,audioContext.currentTime);
   }
 
 
@@ -279,10 +299,10 @@ export default class NuTemplate extends NuBaseModule {
 	      this.monoOsc3 = audioContext.createOscillator();
 	      this.monoOsc3.frequency.value = this.currOscFrq3;
   		  this.monoOsc3.type = this.currOscType;
-        this.monoOscB3 = audioContext.createOscillator();
+          this.monoOscB3 = audioContext.createOscillator();
 
-        var tempNote = (69 + 12 * Math.log2(this.currOscFrq3/440)) + this.tuneDiff; 
-        this.monoOscB3.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
+          var tempNote = (69 + 12 * Math.log2(this.currOscFrq3/440)) + this.tuneDiff; 
+          this.monoOscB3.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
 	      this.monoOscB3.type = this.currOscTypeB;      
 	      this.monoOsc3.connect(this.oscGain3);
 	      this.monoOscB3.connect(this.oscGainB3);
@@ -320,6 +340,7 @@ export default class NuTemplate extends NuBaseModule {
         this.monoOsc1.frequency.cancelScheduledValues(currentTime);
         this.monoOsc1.frequency.setValueAtTime(tempPitch,currentTime);
         this.monoOsc1.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+		this.currOscFrq1 = value;
 
         var tempPitch2 = this.monoOscB1.frequency.value;
         var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
@@ -327,6 +348,7 @@ export default class NuTemplate extends NuBaseModule {
         this.monoOscB1.frequency.cancelScheduledValues(currentTime);
         this.monoOscB1.frequency.setValueAtTime(tempPitch2,currentTime);
         this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+
     }
     if(voice===2  && this.isStarted2)
     {
@@ -335,6 +357,7 @@ export default class NuTemplate extends NuBaseModule {
         this.monoOsc2.frequency.cancelScheduledValues(currentTime);
         this.monoOsc2.frequency.setValueAtTime(tempPitch,currentTime);
         this.monoOsc2.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+        this.currOscFrq2 = value;
 
         var tempPitch2 = this.monoOscB2.frequency.value;
         var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
@@ -350,6 +373,7 @@ export default class NuTemplate extends NuBaseModule {
         this.monoOsc3.frequency.cancelScheduledValues(currentTime);
         this.monoOsc3.frequency.setValueAtTime(tempPitch,currentTime);
         this.monoOsc3.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+        this.currOscFrq = value;
 
         var tempPitch2 = this.monoOscB3.frequency.value;
         var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
@@ -461,10 +485,10 @@ export default class NuTemplate extends NuBaseModule {
    {
       var currGain2 = this.oscGainB1.gain.value; 
       var nextGain = this.oscGain1.gain.value * this.currGainB; 
+      this.currGainB1 = value;
       var currentTime = audioContext.currentTime;  
-      this.currGain2 = value;       
       this.oscGainB1.gain.cancelScheduledValues(currentTime);
-      this.oscGainB1.gain.setValueAtTime(currGain2,currentTime);
+//      this.oscGainB1.gain.setValueAtTime(currGain2,currentTime);
       this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
     }
    if (this.isStarted2)
@@ -474,17 +498,17 @@ export default class NuTemplate extends NuBaseModule {
       var currentTime = audioContext.currentTime;  
       this.currGain2 = value;       
       this.oscGainB2.gain.cancelScheduledValues(currentTime);
-      this.oscGainB2.gain.setValueAtTime(currGain2,currentTime);
+//      this.oscGainB2.gain.setValueAtTime(currGain2,currentTime);
       this.oscGainB2.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
     }
-   if (this.isStarted1)
+   if (this.isStarted3)
    {
       var currGain2 = this.oscGainB3.gain.value; 
       var nextGain = this.oscGain3.gain.value * this.currGainB; 
       var currentTime = audioContext.currentTime;  
       this.currGain2 = value;       
       this.oscGainB3.gain.cancelScheduledValues(currentTime);
-      this.oscGainB3.gain.setValueAtTime(currGain2,currentTime);
+ //     this.oscGainB3.gain.setValueAtTime(currGain2,currentTime);
       this.oscGainB3.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
     }
   }
@@ -520,6 +544,24 @@ export default class NuTemplate extends NuBaseModule {
       this.filter.Q.linearRampToValueAtTime(value,currentTime+this.glideTime);
   }
 
+ delayTime(value){
+      var currentTime = audioContext.currentTime;
+      this.delay.delayTime.cancelScheduledValues(currentTime);
+      this.delay.delayTime.setValueAtTime(this.delay.delayTime.value,currentTime);
+      this.delay.delayTime.linearRampToValueAtTime(value,currentTime+this.glideTime);  
+  }
+
+ delayFbk(value){
+      var currentTime = audioContext.currentTime;
+      this.delayGain.gain.cancelScheduledValues(currentTime);
+      this.delayGain.gain.setValueAtTime(this.delayGain.gain.value,currentTime);
+      this.delayGain.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+ 
+     this.delayGainOwn.gain.cancelScheduledValues(currentTime);
+      this.delayGainOwn.gain.setValueAtTime(this.delayGainOwn.gain.value,currentTime);
+      this.delayGainOwn.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+   }
+
   // define synth waveform
   animate(value){
     this.animateOn = value;
@@ -548,14 +590,32 @@ export default class NuTemplate extends NuBaseModule {
 	  ctx.strokeStyle = 'white';
 	  ctx.lineWidth = 2;
       
+      	if((this.touchType == 'additive' || this.touchType == 'loop') && this.isTouching)
+    	{
+    		this.circleTouchPosX = this.touchX;
+    		this.circleTouchPosY = this.touchY;
+    	}
+
+      	if((this.touchType == 'additive' || this.touchType == 'loop') && this.isTouching== false)
+      	{
+    		if(this.circleTouchPosX < 0.5)
+    			this.circleTouchPosX = this.circleTouchPosX + 0.03;
+    		if(this.circleTouchPosX > 0.5)
+    			this.circleTouchPosX = this.circleTouchPosX - 0.03;
+    		if(this.circleTouchPosY < 0.5)
+    			this.circleTouchPosY = this.circleTouchPosY + 0.03;
+    		if(this.circleTouchPosY > 0.5)
+    			this.circleTouchPosY = this.circleTouchPosY - 0.03;
+    	}
+
     	if(this.touchType == 'loop')
     	{
 	       	ctx.beginPath();
-	  	    ctx.arc(this.touchX*window.innerWidth,this.touchY*window.innerHeight,50,0, Math.PI * 2, true);
+	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);
 	  	    ctx.closePath();
 	        ctx.stroke();
 
-	  	    ctx.font = '15px Quicksand-Light';
+/*	  	    ctx.font = '15px Quicksand-Light';
 	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
 	        	ctx.fillText('mou me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
 	        if(this.touchX < this.touchX_last)	        	
@@ -569,19 +629,19 @@ export default class NuTemplate extends NuBaseModule {
 	    
 	        this.touchX_last = this.touchX;
 	        this.touchY_last = this.touchY;
-
+*/
 
 	    }
 
-    	if(this.touchType == 'synth')
+    	if(this.touchType == 'additive')
     	{
 	       	ctx.beginPath();
-	  	    ctx.arc(this.touchX*window.innerWidth,this.touchY*window.innerHeight,50,0, Math.PI * 2, true);
+	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);
 	  	    ctx.closePath();
 	        ctx.stroke();
 
 	  	    ctx.font = '15px sans-serif';
-	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
+/*	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
 	        	ctx.fillText('mou-me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
 	        if(this.touchX < this.touchX_last)	        	
 	        	ctx.fillText('<- DESAFINA', (this.touchX-0.2)*window.innerWidth, this.touchY*window.innerHeight);
@@ -590,17 +650,12 @@ export default class NuTemplate extends NuBaseModule {
 	        if(this.touchY < this.touchY_last)	        	
 	        	ctx.fillText('BATIMENTS', (this.touchX-0.05)*window.innerWidth, (this.touchY-0.1)*window.innerHeight);
 	        if(this.touchY > this.touchY_last)	        	
-	        	ctx.fillText('BATIMENTS', (this.touchX-0.05)*window.innerWidth, (this.touchY+0.1)*window.innerHeight);
+*/	        	ctx.fillText(this.FilterFrqTouchOffset, 0.1*window.innerWidth, 0.1*window.innerHeight);
 	    
 	        this.touchX_last = this.touchX;
 	        this.touchY_last = this.touchY;
-
-	        if(this.isStarted1)
-	        {
-	        	// log oscFrqTouchOffset
-	        	//ctx.fillText(this.OscFrqTouchOffset , 0.1*window.innerWidth, 0.1*window.innerHeight);
-	    	}
 	    }
+
 
 	    // DRAW WAVEFORM
         ctx.beginPath();
@@ -759,8 +814,6 @@ export default class NuTemplate extends NuBaseModule {
   }
 
   convolverVol(value){
-  	console.log('convVol');
-
       var currGain = this.convolverGain.gain.value; 
       var currentTime = audioContext.currentTime; 
       this.convolverGain.gain.cancelScheduledValues(currentTime);
@@ -779,8 +832,16 @@ export default class NuTemplate extends NuBaseModule {
     // notify touch on
     //this.e.send('osc', '/' + this.moduleName, ['touchOn', 1] );
     // common touch callback
-    this.touchCommonCallback(id, normX, normY);      
-  }
+    this.touchCommonCallback(id, normX, normY); 
+    this.isTouching = true;  
+
+    var nextGain = this.oscGain1.gain.value; 
+    var currentTime = audioContext.currentTime;  
+    this.oscGainB1.gain.cancelScheduledValues(currentTime);
+    this.oscGainB1.gain.setValueAtTime(nextGain * this.currGainB1,currentTime);
+    this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+1.0);
+    this.currGainB1 = 1.;
+ }
 
   touchMoveCallback(id, normX, normY){
     // common touch callback
@@ -791,27 +852,73 @@ export default class NuTemplate extends NuBaseModule {
     // notify touch off
     //this.e.send('osc', '/' + this.moduleName, ['touchOn', 0] );
     // common touch callback
-    this.touchCommonCallback(id, normX, normY);    
+//    this.touchCommonCallback(id, normX, normY);   
+
+	if(this.touchType == 'additive')
+	{
+	    var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + (this.touchX-0.5)*2.0; 
+		var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+		var currentTime = audioContext.currentTime;
+		this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+	//	this.monoOsc1.frequency.setValueAtTime(f2,currentTime);
+		this.monoOsc1.frequency.linearRampToValueAtTime(this.currOscFrq1,currentTime+1.0);
+
+	    var tempNote = tempNote + (0.5-this.touchY)*0.5; 
+	    var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+	    this.monoOscB1.frequency.cancelScheduledValues(currentTime);
+	//    this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
+	    this.monoOscB1.frequency.linearRampToValueAtTime(this.currOscFrq1,currentTime+1.0); 
+
+	    var nextGain = this.oscGain1.gain.value; 
+	    this.oscGainB1.gain.cancelScheduledValues(currentTime);
+	    this.oscGainB1.gain.setValueAtTime(nextGain * this.currGainB1,currentTime);
+	    this.oscGainB1.gain.linearRampToValueAtTime(0.,currentTime+1.);
+	    this.currGainB1 = 0.;
+
+  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1.; 
+		var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
+		this.filter.frequency.cancelScheduledValues(currentTime);
+		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
+		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+1.);
+	}
+    this.isTouching = false;
   }  
 
   touchCommonCallback(id, normX, normY){
  	    
  	    this.touchX = normX;
  	    this.touchY = normY;
-
+ 	  var beatingsAmount = 0;
 
       if(this.touchType == 'loop')
       {
   	    //this.sampleVol(normY);
-        this.sampleSpeed((1-normY)*2.);
+        this.sampleSpeed((1-this.touchY)*2.);
   	    //this.sampleLoopIn(normX);
-  	    this.sampleLoopOut(normX);
+  	    this.sampleLoopOut(this.touchX);
 
 	   	}
 
-      if(this.touchType == 'synth')
+      if(this.touchType == 'additive')
       {
-      	this.OscFrqTouchOffset = (this.touchX-0.5)*2.0;
+      	if(this.touchX>0.5)
+      	{
+      		this.OscFrqTouchOffset = (this.touchX-0.5)*2.0;
+	      	this.FilterFrqTouchOffset = this.touchX*2.*5.;
+      	}else
+      	{
+      		this.OscFrqTouchOffset = 0.;
+	      	this.FilterFrqTouchOffset = (0.5-this.touchX)*2.*20.;
+      	}
+      	if(this.touchY<0.5)
+      	{
+      		beatingsAmount = this.touchY;
+	      	this.convolverVol(0.);
+      	}else
+      	{
+      		beatingsAmount = 0.5;
+	      	this.convolverVol(this.touchY-0.5);
+      	}
 
 		var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.OscFrqTouchOffset; 
 		var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
@@ -821,18 +928,21 @@ export default class NuTemplate extends NuBaseModule {
 //		this.monoOsc1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
 //		this.currOscFrq1 = this.monoOsc1.frequency.value;
 
-/*      	if(this.lfoFunction != 'tremolo')
-      		this.setFunctionLfo('tremolo');
-      	if(normY<0.5){
-      	  this.setFrqLfo((0.5-normY)*15.0);
-      	  this.setAmpLfo(0.5);
-      	}
-      	else
-      	  this.setAmpLfo(0.);     		
-      }*/
-
-        this.setVolOscB((0.5-normY)*2.);
+        var tempNote = tempNote + (0.5-beatingsAmount)*0.5; 
+        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+ //       this.monoOscB1.frequency.cancelScheduledValues(currentTime);
+        this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
+ //       this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+ 		
+  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1. + this.FilterFrqTouchOffset; 
+		var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
+//   		this.currFilterFrq = value + 100.;
+   		this.filter.frequency.cancelScheduledValues(currentTime);
+   		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
+   		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+this.glideTime);
+    
     }
+
   }
 
    // Note: hereafter are the OSC triggered functions used to enable / disable 
@@ -842,9 +952,18 @@ export default class NuTemplate extends NuBaseModule {
   	var onOff = false;
   	this.touchType = value;
 
-   	if(value === 'loop' || value =='synth')
+   	if(value === 'loop' || value =='additive')
    		onOff = true;
 
+   	if(value =='additive')
+   	{
+		var currentTime = audioContext.currentTime;
+  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1.; 
+		var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
+		this.filter.frequency.cancelScheduledValues(currentTime);
+		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
+		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+1.)
+	}
       // enable if not already enabled
     if( onOff && !this.callBackStatus.touch ){
         this.surface.addListener('touchstart', this.touchStartCallback);
@@ -876,4 +995,3 @@ export default class NuTemplate extends NuBaseModule {
   }
 
 }
-
