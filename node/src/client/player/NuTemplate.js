@@ -52,6 +52,13 @@ export default class NuTemplate extends NuBaseModule {
       energy: false,
       touch: false
     };
+  
+    this.colors = {
+      'rest': [0,0,0], 
+      'active': [255, 255, 255], 
+      'current': [0,0,0]
+    };
+
     this.surface = new soundworks.TouchSurface(this.e.view.$el);
 
     // binding
@@ -63,7 +70,7 @@ export default class NuTemplate extends NuBaseModule {
     this.touchStartCallback = this.touchStartCallback.bind(this);
     this.touchMoveCallback = this.touchMoveCallback.bind(this);
     this.touchEndCallback = this.touchEndCallback.bind(this);
-    this.touch = this.touch.bind(this);
+    this.scene = this.scene.bind(this);
 
     // binding
     this.directToClientMethod = this.directToClientMethod.bind(this);
@@ -96,6 +103,11 @@ export default class NuTemplate extends NuBaseModule {
     this.delayFbk = this.delayFbk.bind(this); // delay feedback gain
     this.delayTime = this.delayTime.bind(this); // delay time
     this.animateLoop = this.animateLoop.bind(this); // every frame loop animation
+    this.bgColor = this.bgColor.bind(this); // background color
+    this.blink = this.blink.bind(this); // background color
+    this.text1 = this.text1.bind(this); 
+    this.text2 = this.text2.bind(this); 
+    this.text3 = this.text3.bind(this); 
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
@@ -204,18 +216,21 @@ export default class NuTemplate extends NuBaseModule {
     this.animateOn = 0;
     this.touchX=0.5;
     this.touchY=0.5;
-    this.touchX_last =0.5;
-    this.touchY_last = 0.5;
     this.isTouching = false;
     this.colorsR=255;
     this.colorsG=0;
     this.colorsB=0;
     this.circleTouchPosX = 0.5;
     this.circleTouchPosY = 0.5;
-  	this.touchType = 'none';
+  	this.sceneSel = 'none';
 	this.FilterFrqTouchOffset = 0.;
 	this.delayGain.gain.value = 0;
 	this.convolverGainToDelay.gain.value = 0.1;
+	this.magnitudes = new Uint8Array(this.analyser.fftSize);
+	this.blinkStatus = { isBlinking: false, savedBkgColor: [0,0,0] };
+	this.loopLenMultiples=[0.125,0.25,0.5,1,0.75,0.5,0.5];
+	this.loopXposCurrent = 0.5;
+	this.lastSampleLoopLen = 0.6;
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
@@ -264,14 +279,14 @@ export default class NuTemplate extends NuBaseModule {
     if(voice === 2)
     {
 	    if (value === 1 && !this.isStarted2) {
-	      this.monoOsc2 = audioContext.createOscillator();
-	      this.monoOsc2.frequency.value = this.currOscFrq2;
-  		  this.monoOsc2.type = this.currOscType;
-        this.monoOscB2 = audioContext.createOscillator();
-        this.monoOscB2.type = this.currOscTypeB;
+	      	this.monoOsc2 = audioContext.createOscillator();
+	      	this.monoOsc2.frequency.value = this.currOscFrq2;
+  		  	this.monoOsc2.type = this.currOscType;
+        	this.monoOscB2 = audioContext.createOscillator();
+        	this.monoOscB2.type = this.currOscTypeB;
 
-        var tempNote = (69 + 12 * Math.log2(this.currOscFrq2/440)) + this.tuneDiff; 
-        this.monoOscB2.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
+        	var tempNote = (69 + 12 * Math.log2(this.currOscFrq2/440)) + this.tuneDiff; 
+        	this.monoOscB2.frequency.value = (440/32) * (2 ** ((tempNote - 9) / 12)); 
 	      this.monoOsc2.connect(this.oscGain2);
 	      this.monoOscB2.connect(this.oscGainB2);
 	      this.oscGain1.gain.value = this.currGain1;
@@ -576,6 +591,8 @@ export default class NuTemplate extends NuBaseModule {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
+      var minRms = 127.5;
+      var maxRms = 132.;
       var risingEdge = 0;
       var edgeThreshold =5;
       var scaling = canvas.height / 256;
@@ -583,20 +600,47 @@ export default class NuTemplate extends NuBaseModule {
       this.analyser.getByteTimeDomainData(timeData);
  
  	// backgroundColor
- 	  ctx.fillStyle = 'black';
+      if(this.sceneSel == 'synth')
+      {
+      	      var buffer = new Uint8Array(this.analyser.frequencyBinCount);
+		      this.analyser.getByteTimeDomainData(buffer);
+
+		    var rms = 0;
+		    for( var i = 0; i < buffer.length; ++i ) {
+	      		rms += buffer[i] * buffer[i];
+		    }
+		    rms /= buffer.length;
+		    rms = Math.sqrt(rms);
+
+		    if ( rms == 128)
+		    	rms = 127.5;
+		    if(rms > maxRms)
+		    	rms = maxRms;
+		    rms = (rms - minRms) / (maxRms-minRms); // normalization to 256
+
+      		for (let i = 0; i < this.colors.current.length; i++) {
+      			this.colors.current[i] = this.colors.rest[i]  + 
+                rms * ( this.colors.active[i] - this.colors.rest[i] );
+  			}   
+
+	  }
+	 ctx.fillStyle = 'rgb('
+	        + Math.round(this.colors.current[0]) + ','
+	        + Math.round(this.colors.current[1]) + ','
+	        + Math.round(this.colors.current[2]) + ')';
       ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
 	  ctx.fillStyle = 'white';
 	  ctx.strokeStyle = 'white';
 	  ctx.lineWidth = 2;
       
-      	if((this.touchType == 'additive' || this.touchType == 'loop') && this.isTouching)
+      	if((this.sceneSel == 'additive' || this.sceneSel == 'loop' || this.sceneSel == 'loopFree') && this.isTouching)
     	{
     		this.circleTouchPosX = this.touchX;
     		this.circleTouchPosY = this.touchY;
     	}
 
-      	if((this.touchType == 'additive' || this.touchType == 'loop') && this.isTouching== false)
+      	if((this.sceneSel == 'additive') && this.isTouching== false)
       	{
     		if(this.circleTouchPosX < 0.5)
     			this.circleTouchPosX = this.circleTouchPosX + 0.03;
@@ -607,56 +651,39 @@ export default class NuTemplate extends NuBaseModule {
     		if(this.circleTouchPosY > 0.5)
     			this.circleTouchPosY = this.circleTouchPosY - 0.03;
     	}
+      	if(this.sceneSel == 'loop' && this.isTouching== false) 
+      	{
+//      		var indexSpeed = Math.round(this.circleTouchPosY * 6);
+//      		console.log(indexSpeed);
+//	        this.sampleSpeed(this.loopLenMultiples[indexSpeed]);
 
-    	if(this.touchType == 'loop')
+/*    		if(this.circleTouchPosX < 0.5)
+    			this.circleTouchPosX = this.circleTouchPosX + 0.03;
+    		if(this.circleTouchPosX > 0.5)
+    			this.circleTouchPosX = this.circleTouchPosX - 0.03;*/
+/*    		if(this.circleTouchPosY < indexSpeed)
+    			this.circleTouchPosY = this.circleTouchPosY + 0.03;
+    		if(this.circleTouchPosY > indexSpeed)
+    			this.circleTouchPosY = this.circleTouchPosY - 0.03;*/
+
+//    		ctx.font = '15px sans-serif';
+//        	ctx.fillText(indexSpeed, 0.1*window.innerWidth, 0.1*window.innerHeight);
+    	}
+    	//	        this.sampleSpeed((1-this.touchY)*2.);
+
+
+    	if(this.sceneSel == 'additive' || this.sceneSel == 'loop' || this.sceneSel == 'loopFree')
     	{
 	       	ctx.beginPath();
 	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);
 	  	    ctx.closePath();
 	        ctx.stroke();
 
-/*	  	    ctx.font = '15px Quicksand-Light';
-	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
-	        	ctx.fillText('mou me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchX < this.touchX_last)	        	
-	        	ctx.fillText('<- loop CURT', (this.touchX-0.2)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchX > this.touchX_last)	        	
-	        	ctx.fillText('loop LLARG ->', (this.touchX+0.1)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchY < this.touchY_last)	        	
-	        	ctx.fillText('+ to', (this.touchX)*window.innerWidth, (this.touchY-0.1)*window.innerHeight);
-	        if(this.touchY > this.touchY_last)	        	
-	        	ctx.fillText('- to', (this.touchX)*window.innerWidth, (this.touchY+0.1)*window.innerHeight);
-	    
-	        this.touchX_last = this.touchX;
-	        this.touchY_last = this.touchY;
-*/
-
+	        //ctx.font = '15px sans-serif';
+        	//ctx.fillText(this.FilterFrqTouchOffset, 0.1*window.innerWidth, 0.1*window.innerHeight);
 	    }
 
-    	if(this.touchType == 'additive')
-    	{
-	       	ctx.beginPath();
-	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);
-	  	    ctx.closePath();
-	        ctx.stroke();
-
-	  	    ctx.font = '15px sans-serif';
-/*	        if(this.touchX == this.touchX_last && this.touchY == this.touchY_last)	        	
-	        	ctx.fillText('mou-me', (this.touchX-0.03)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchX < this.touchX_last)	        	
-	        	ctx.fillText('<- DESAFINA', (this.touchX-0.2)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchX > this.touchX_last)	        	
-	        	ctx.fillText('DESAFINA ->', (this.touchX+0.1)*window.innerWidth, this.touchY*window.innerHeight);
-	        if(this.touchY < this.touchY_last)	        	
-	        	ctx.fillText('BATIMENTS', (this.touchX-0.05)*window.innerWidth, (this.touchY-0.1)*window.innerHeight);
-	        if(this.touchY > this.touchY_last)	        	
-*/	        	ctx.fillText(this.FilterFrqTouchOffset, 0.1*window.innerWidth, 0.1*window.innerHeight);
-	    
-	        this.touchX_last = this.touchX;
-	        this.touchY_last = this.touchY;
-	    }
-
-
+ 
 	    // DRAW WAVEFORM
         ctx.beginPath();
       while (timeData[risingEdge++] -128 > 0 && risingEdge <= canvas.width);
@@ -786,8 +813,8 @@ export default class NuTemplate extends NuBaseModule {
 
 	sampleLoopRandIn() {
 		var newIn = Math.floor(Math.random()*100) /100.;
-		this.bufferSource.loopStart = newIn;
-		this.bufferSource.loopEnd = newIn + this.sampleLoopLen;
+		this.bufferSource.loopStart = newIn*4.;
+		this.bufferSource.loopEnd = newIn*4. + this.sampleLoopLen;
 	}
 
 	sampleLen(value) {
@@ -810,7 +837,6 @@ export default class NuTemplate extends NuBaseModule {
 
   sampleSpeed(value) {
   	this.bufferSource.playbackRate.value = value;
-  	console.log('speed');
   }
 
   convolverVol(value){
@@ -854,7 +880,7 @@ export default class NuTemplate extends NuBaseModule {
     // common touch callback
 //    this.touchCommonCallback(id, normX, normY);   
 
-	if(this.touchType == 'additive')
+	if(this.sceneSel == 'additive')
 	{
 	    var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + (this.touchX-0.5)*2.0; 
 		var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
@@ -888,59 +914,83 @@ export default class NuTemplate extends NuBaseModule {
  	    
  	    this.touchX = normX;
  	    this.touchY = normY;
- 	  var beatingsAmount = 0;
+ 	  	var beatingsAmount = 0;
 
-      if(this.touchType == 'loop')
+      if(this.sceneSel == 'loop')
       {
-  	    //this.sampleVol(normY);
-        this.sampleSpeed((1-this.touchY)*2.);
-  	    //this.sampleLoopIn(normX);
-  	    this.sampleLoopOut(this.touchX);
+      		if(this.touchY > 0.6)
+      		{
+      			var lenPart = 1.;
+	       		var indexS = Math.round(this.touchY * 6);
+	  			var speedS = this.loopLenMultiples[indexS];
+	  			this.sampleSpeed(speedS);
+		  	    this.sampleLoopIn(this.touchX*4.);
+//		  	    speedS = speedS /2.;
+		  	    if(indexS==6) 
+		  	    	speedS = speedS /1.5;
+		  	    if(indexS==5) 
+		  	    	speedS = speedS /1.5;
 
+		  	    this.sampleLoopOut((this.touchX*4.)+(this.lastSampleLoopLen * speedS));
+     		}else{
+	      		var indexLen = Math.round(this.touchY * 6);
+	  			this.lastSampleLoopLen = this.sampleLoopLen * this.loopLenMultiples[indexLen];
+		  	    this.sampleLoopIn(this.touchX*4.);
+		  	    this.sampleLoopOut((this.touchX*4.)+this.lastSampleLoopLen);
+		  	    this.sampleSpeed(1.);
+
+      		}
+		}
+      if(this.sceneSel == 'loopFree')
+      {
+	  	    //this.sampleVol(normY);
+	        this.sampleSpeed((1-this.touchY)*2.);
+	  	    //this.sampleLoopIn(normX);
+	  	    this.sampleLoopOut(this.touchX);
 	   	}
 
-      if(this.touchType == 'additive')
+      if(this.sceneSel == 'additive')
       {
-      	if(this.touchX>0.5)
-      	{
-      		this.OscFrqTouchOffset = (this.touchX-0.5)*2.0;
-	      	this.FilterFrqTouchOffset = this.touchX*2.*5.;
-      	}else
-      	{
-      		this.OscFrqTouchOffset = 0.;
-	      	this.FilterFrqTouchOffset = (0.5-this.touchX)*2.*20.;
-      	}
-      	if(this.touchY<0.5)
-      	{
-      		beatingsAmount = this.touchY;
-	      	this.convolverVol(0.);
-      	}else
-      	{
-      		beatingsAmount = 0.5;
-	      	this.convolverVol(this.touchY-0.5);
-      	}
+	      	if(this.touchX>0.5)
+	      	{
+	      		this.OscFrqTouchOffset = (this.touchX-0.5)*2.0;
+		      	this.FilterFrqTouchOffset = this.touchX*2.*5.;
+	      	}else
+	      	{
+	      		this.OscFrqTouchOffset = 0.;
+		      	this.FilterFrqTouchOffset = (0.5-this.touchX)*2.*20.;
+	      	}
+	      	if(this.touchY<0.5)
+	      	{
+	      		beatingsAmount = this.touchY;
+		      	this.convolverVol(0.);
+	      	}else
+	      	{
+	      		beatingsAmount = 0.5;
+		      	this.convolverVol(this.touchY-0.5);
+	      	}
 
-		var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.OscFrqTouchOffset; 
-		var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
-		var currentTime = audioContext.currentTime;
-//		this.monoOsc1.frequency.cancelScheduledValues(currentTime);
-		this.monoOsc1.frequency.setValueAtTime(f2,currentTime);
-//		this.monoOsc1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
-//		this.currOscFrq1 = this.monoOsc1.frequency.value;
+			var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.OscFrqTouchOffset; 
+			var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+			var currentTime = audioContext.currentTime;
+	//		this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+			this.monoOsc1.frequency.setValueAtTime(f2,currentTime);
+	//		this.monoOsc1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+	//		this.currOscFrq1 = this.monoOsc1.frequency.value;
 
-        var tempNote = tempNote + (0.5-beatingsAmount)*0.5; 
-        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
- //       this.monoOscB1.frequency.cancelScheduledValues(currentTime);
-        this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
- //       this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
- 		
-  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1. + this.FilterFrqTouchOffset; 
-		var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
-//   		this.currFilterFrq = value + 100.;
-   		this.filter.frequency.cancelScheduledValues(currentTime);
-   		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
-   		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+this.glideTime);
-    
+	        var tempNote = tempNote + (0.5-beatingsAmount)*0.5; 
+	        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
+	 //       this.monoOscB1.frequency.cancelScheduledValues(currentTime);
+	        this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
+	 //       this.monoOscB1.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
+	 		
+	  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1. + this.FilterFrqTouchOffset; 
+			var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
+	//   		this.currFilterFrq = value + 100.;
+	   		this.filter.frequency.cancelScheduledValues(currentTime);
+	   		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
+	   		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+this.glideTime);
+	    
     }
 
   }
@@ -948,12 +998,12 @@ export default class NuTemplate extends NuBaseModule {
    // Note: hereafter are the OSC triggered functions used to enable / disable 
   // hereabove callbacks
 
-  touch(value){
-  	var onOff = false;
-  	this.touchType = value;
+  scene(value){
+  	var touchOnOff = false;
+  	this.sceneSel = value;
 
-   	if(value === 'loop' || value =='additive')
-   		onOff = true;
+   	if(value === 'loop' || value === 'loopFree' || value =='additive')
+   		touchOnOff = true;
 
    	if(value =='additive')
    	{
@@ -965,19 +1015,79 @@ export default class NuTemplate extends NuBaseModule {
 		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+1.)
 	}
       // enable if not already enabled
-    if( onOff && !this.callBackStatus.touch ){
+    if( touchOnOff && !this.callBackStatus.touch ){
         this.surface.addListener('touchstart', this.touchStartCallback);
         this.surface.addListener('touchmove', this.touchMoveCallback);
         this.surface.addListener('touchend', this.touchEndCallback);
         this.callBackStatus.touch = true;
     }
       // disable if not already disabled
-    if( !onOff && this.callBackStatus.touch ){
+    if( !touchOnOff && this.callBackStatus.touch ){
         this.surface.removeListener('touchstart', this.touchStartCallback);
         this.surface.removeListener('touchmove', this.touchMoveCallback);
         this.surface.removeListener('touchend', this.touchEndCallback);
         this.callBackStatus.touch = false;
     }
+  }
+
+  bgColor(rgb){
+    this.colors.active = rgb;
+    this.colors.current = rgb;	
+  }
+
+   blink(args){
+   	let color=[0,0,0];
+   	color[0] = args.shift();
+   	color[1] = args.shift();
+   	color[2] = args.shift();
+    let time = args.shift();
+   	
+    // discard if already blinking
+    if( this.blinkStatus.isBlinking ){ return; }
+    this.blinkStatus.isBlinking = true;
+    // save current background color
+    for (let i = 0; i < 3; i++)
+      this.blinkStatus.savedBkgColor[i] = this.colors.current[i];
+    // change bkg color
+    this.colors.current = color;
+    //this.bkgChangeColor = true;
+    setTimeout(() => { 
+      for (let i = 0; i < 3; i++)
+        this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+      this.blinkStatus.isBlinking = false
+      //this.bkgChangeColor = true;
+    }, time * 1000);
+  }
+
+  text1(args){
+    let str = this.formatText(args);
+    document.getElementById('text1').innerHTML = str;
+  }
+
+  // defined text (on middle of the player's screen) from OSC client (instructions)
+  text2(args){
+    let str = this.formatText(args);
+    document.getElementById('text2').innerHTML = str;
+  }
+
+  // defined text (on bottom of the player's screen) from OSC client (sub-instructions)
+  text3(args){
+    let str = this.formatText(args);
+    document.getElementById('text3').innerHTML = str;
+  }
+
+  // convert array of elements to string
+  formatText(args){
+    let str = '';
+    // simple string
+    if( typeof args === 'string' ){ str = args; }
+    // array of strings
+    else{ args.forEach( (elmt) => { str += ' ' + elmt;  }); }
+    // replace "cliendId" with actual client index and other conventional naming
+    str = str.replace("clientId", client.index);
+    str = str.replace("None", '');
+    // return formatted string
+    return str;
   }
 
   // re-routed event for sync. playback: server add a rdv time to msg sent by OSC client
