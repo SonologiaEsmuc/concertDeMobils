@@ -210,7 +210,7 @@ export default class NuTemplate extends NuBaseModule {
     this.tuneDiff = 0; //extra Osc tune difference from osc
     this.bufferSource.loop = false;
     this.bufferGain.gain.value = 1.;
-    this.convolverGain.gain.value = 1.;
+    this.convolverGain.gain.value = 0.;
     this.sampleOffset = 0;
   	this.sampleLoopLen = 0.1;
     this.animateOn = 0;
@@ -590,6 +590,8 @@ export default class NuTemplate extends NuBaseModule {
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      var cw = window.innerWidth;
+      var ch = window.innerHeight;
 
       var minRms = 127.5;
       var maxRms = 132.;
@@ -672,16 +674,71 @@ export default class NuTemplate extends NuBaseModule {
     	//	        this.sampleSpeed((1-this.touchY)*2.);
 
 
+    	//
     	if(this.sceneSel == 'additive' || this.sceneSel == 'loop' || this.sceneSel == 'loopFree')
     	{
 	       	ctx.beginPath();
-	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);
+	  	    ctx.arc(this.circleTouchPosX*window.innerWidth,this.circleTouchPosY*window.innerHeight,50,0, Math.PI * 2, true);	  	    
 	  	    ctx.closePath();
 	        ctx.stroke();
-
-	        //ctx.font = '15px sans-serif';
-        	//ctx.fillText(this.FilterFrqTouchOffset, 0.1*window.innerWidth, 0.1*window.innerHeight);
+			
+			if(!this.isTouching)
+				label(ctx,this.circleTouchPosX*cw,this.circleTouchPosY*ch-(ch*0.008),"mou-me",0);
 	    }
+
+    	if(this.sceneSel == 'additive')
+    	{
+
+	    	if(this.isTouching && this.touchX < 0.47)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"+harmonics",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
+	    	}
+	    	if(this.isTouching && this.touchX > 0.53)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"+desafinat",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
+	    	
+	    	}
+	    	if(this.isTouching && this.touchY < 0.47)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"+tremolo  ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.85), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
+	    	}
+	    	if(this.isTouching && this.touchY > 0.53)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"+reverb   ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
+	    	}
+		}
+
+
+    	if(this.sceneSel == 'loop' || this.sceneSel == 'loopFree')
+    	{
+
+	    	if(this.isTouching && this.touchX < 0.47)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"-tamany loop",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
+	    	}
+	    	if(this.isTouching && this.touchX > 0.53)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"-speed     ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
+	    	
+	    	}
+	    	if(this.isTouching && this.touchY < 0.47)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"-inici loop ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.85), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
+	    	}
+	    	if(this.isTouching && this.touchY > 0.53)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"+inici loop ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
+	    	}
+		}
+
 
  
 	    // DRAW WAVEFORM
@@ -695,10 +752,13 @@ export default class NuTemplate extends NuBaseModule {
         ctx.lineTo(x - risingEdge, canvas.height - timeData[x] * scaling);
         ctx.stroke();
 
+
+
       if(this.animateOn == 1) 
         requestAnimationFrame(this.animateLoop);
       else
         ctx.clearRect(0,0,canvas.width, canvas.height);
+
   }
 
   setFunctionLfo(value){
@@ -1103,5 +1163,29 @@ export default class NuTemplate extends NuBaseModule {
     this.e.renderer.blink([0, this.params.gain * value, 0], 0.4);
 //    console.log('WEEEEE now!');
   }
+}
 
+function canvas_arrow(context, fromx, fromy, tox, toy){
+	var headlen = 3; // length of head in pixels
+	var dx = tox - fromx;
+	var dy = toy - fromy;
+	var angle = Math.atan2(dy,dx);
+   	context.beginPath();
+	context.moveTo(fromx, fromy);
+	context.lineTo(tox, toy);
+	context.lineTo(tox-headlen * Math.cos(angle-Math.PI/6), toy - headlen * Math.sin(angle - Math.PI/6));
+	context.moveTo(tox, toy);
+	context.lineTo(tox-headlen * Math.cos(angle+Math.PI/6), toy - headlen * Math.sin(angle+Math.PI/6));
+	context.stroke();
+}
+
+function label(ctx,posx, posy, text, angle)
+{
+    ctx.save();
+	ctx.translate(posx, posy);
+	ctx.rotate(angle);
+	ctx.textAlign ="center";
+	ctx.font = '18px Quicksand';
+	ctx.fillText(text, 0, 0);
+	ctx.restore();
 }
