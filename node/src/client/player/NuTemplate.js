@@ -696,23 +696,23 @@ export default class NuTemplate extends NuBaseModule {
     	if(this.sceneSel == 'additive')
     	{
 
-	    	if(this.isTouching && this.touchX < 0.47)
+	    	if(this.isTouching && this.touchX < 0.4)
 	    	{
 	 			label(ctx,cw/2,ch*0.22,"+harmonics",0);
 		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
 	    	}
-	    	if(this.isTouching && this.touchX > 0.53)
+	    	if(this.isTouching && this.touchX > 0.6)
 	    	{
 	 			label(ctx,cw/2,ch*0.22,"+desafinat",0);
 		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
 	    	
 	    	}
-	    	if(this.isTouching && this.touchY < 0.47)
+	    	if(this.isTouching && this.touchY < 0.4)
 	    	{
 	 			label(ctx,cw/2,ch*0.24,"+tremolo  ",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.85), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
 	    	}
-	    	if(this.isTouching && this.touchY > 0.53)
+	    	if(this.isTouching && this.touchY > 0.6)
 	    	{
 	 			label(ctx,cw/2,ch*0.24,"+reverb   ",0);
 		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
@@ -720,33 +720,53 @@ export default class NuTemplate extends NuBaseModule {
 		}
 
 
-    	if(this.sceneSel == 'loop' || this.sceneSel == 'loopFree')
+    	if(this.sceneSel == 'loop')
     	{
 
-	    	if(this.isTouching && this.touchX < 0.47)
+	    	if(this.isTouching && (this.touchX < 0.4 || this.touchX > 0.6))
 	    	{
-	 			label(ctx,cw/2,ch*0.22,"-tamany loop",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
+	 			label(ctx,cw/2,ch*0.22,"canvi frase",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.07) -(cw*0.05), ch*0.22-(ch*0.011), cw/2-(cw*0.1) -(cw*0.05), ch*0.22-(ch*0.011));
+		    	canvas_arrow(ctx, cw/2 -(cw*0.1) , ch*0.22-(ch*0.011), cw/2-(cw*0.07) , ch*0.22-(ch*0.011));
 	    	}
-	    	if(this.isTouching && this.touchX > 0.53)
-	    	{
-	 			label(ctx,cw/2,ch*0.22,"-speed     ",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
 	    	
-	    	}
-	    	if(this.isTouching && this.touchY < 0.47)
+	    	if(this.isTouching && this.touchY < 0.4)
 	    	{
-	 			label(ctx,cw/2,ch*0.24,"-inici loop ",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.85), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
+	 			label(ctx,cw/2,ch*0.24,"+curt      ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
 	    	}
-	    	if(this.isTouching && this.touchY > 0.53)
+	    	if(this.isTouching && this.touchY > 0.6)
 	    	{
-	 			label(ctx,cw/2,ch*0.24,"+inici loop ",0);
+	 			label(ctx,cw/2,ch*0.24,"+greu      ",0);
 		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
 	    	}
 		}
+    	
+    	if(this.sceneSel == 'loopFree')
+    	{
 
-
+	    	if(this.isTouching && this.touchX < 0.4)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"+curt     ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
+	    	}
+	    	if(this.isTouching && this.touchX > 0.6)
+	    	{
+	 			label(ctx,cw/2,ch*0.22,"+llarg    ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
+	    	
+	    	}
+	    	if(this.isTouching && this.touchY < 0.4)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"+to       ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
+	    	}
+	    	if(this.isTouching && this.touchY > 0.6)
+	    	{
+	 			label(ctx,cw/2,ch*0.24,"-to       ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
+	    	}
+		}
  
 	    // DRAW WAVEFORM
         ctx.beginPath();
@@ -1013,7 +1033,7 @@ export default class NuTemplate extends NuBaseModule {
 	  	    //this.sampleVol(normY);
 	        this.sampleSpeed((1-this.touchY)*2.);
 	  	    //this.sampleLoopIn(normX);
-	  	    this.sampleLoopOut(this.touchX);
+	  	    this.sampleLoopOut((this.touchX*4.) +this.bufferSource.loopStart);
 	   	}
 
       if(this.sceneSel == 'additive')
