@@ -2,6 +2,7 @@
  * NuTemplate: example of how to create a Nu module
  **/
 
+import NoSleep from 'nosleep.js';
 import NuBaseModule from './NuBaseModule'
 import * as soundworks from 'soundworks/client';
 import audioFiles from '../shared/audioFiles';
@@ -9,6 +10,7 @@ import audioFiles from '../shared/audioFiles';
 const client = soundworks.client;
 const audioContext = soundworks.audioContext;
 
+var noSleep = new NoSleep();
 // previous impl. was based on audio buffer calls view integer.
 // adapt: from name to integar to avoid changing whole code here.
 const audioFileNameToId = new Map();
@@ -235,6 +237,11 @@ export default class NuTemplate extends NuBaseModule {
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
     this.filter.frequency.setValueAtTime(20000,audioContext.currentTime);
+
+ //   document.addEventListener('click', function enableNoSleep(){
+ //   	document.removeEventLIstener('click', enableNoSleep, false);
+    	noSleep.enable();
+ //   }, false);
   }
 
 
