@@ -501,6 +501,30 @@ export default class NuTemplate extends NuBaseModule {
             this.oscGainB3.gain.linearRampToValueAtTime(nextGain,currentTime+this.glideTime);
         }
   }
+
+   setSlowVolOsc(args){
+      let voice = args.shift();
+      let value = args.shift();
+    
+      if(voice===1)
+      {
+          var currGain = this.oscGain1.gain.value; 
+          var currentTime = audioContext.currentTime;  
+          this.currGain1 = value;       
+          this.oscGain1.gain.cancelScheduledValues(currentTime);
+          this.oscGain1.gain.setValueAtTime(currGain,currentTime);
+          this.oscGain1.gain.linearRampToValueAtTime(value,currentTime+1.5);
+
+          var currGain2 = this.oscGainB1.gain.value; 
+          var nextGain = this.currGain1 * this.currGainB; 
+          var currentTime = audioContext.currentTime;  
+          this.currGain2 = value;       
+          this.oscGainB1.gain.cancelScheduledValues(currentTime);
+          this.oscGainB1.gain.setValueAtTime(currGain2,currentTime);
+          this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+1.5);
+      }
+
+  }
   setVolOscB(value){
     this.currGainB = value;
 
@@ -690,6 +714,7 @@ export default class NuTemplate extends NuBaseModule {
 
     	if(this.sceneSel == 'additive')
     	{
+    		label(ctx,100,100,this.currOscFrq1,0);
     		/*ctx.beginPath();
     		ctx.moveTo(window.innerWidth/2, 0);
 	  	    ctx.lineTo(window.innerWidth/2,window.innerHeight);	  	    
@@ -791,22 +816,22 @@ export default class NuTemplate extends NuBaseModule {
       {
                 if(this.touchY_inertia<0.5)
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*0.4,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*0.4,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.0,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.0,currentTime+this.glideTime);
                     //this.setVolOsc(1, (0.5-this.touchY)*2); 
                     //this.setVolOscB((0.5-this.touchY)*2); 
                     if(this.touchX>0.5)
-                        beatingsAmount = (this.touchX-0.5)*0.7;
+                        beatingsAmount = (this.touchX-0.5)*0.3;
                     else
                         beatingsAmount = 0.;
 
                 }else
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*0.4,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*0.4,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.0,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.0,currentTime+this.glideTime);
                     //this.setVolOsc("1 ((this.touchY-0.5)*2)"); 
                     if(this.touchX>0.5)
-                        beatingsAmount = (this.touchX-0.5)*0.7;
+                        beatingsAmount = (this.touchX-0.5)*0.3;
                     else
                         beatingsAmount = 0.;
                 }
