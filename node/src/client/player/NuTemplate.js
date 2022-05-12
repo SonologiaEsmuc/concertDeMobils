@@ -712,9 +712,11 @@ export default class NuTemplate extends NuBaseModule {
 				label(ctx,this.circleTouchPosX*cw,this.circleTouchPosY*ch-(ch*0.008),"mou-me",0);
 	    }
 
+		label(ctx,20,20,"f."+this.currOscFrq1,0);
+    	
     	if(this.sceneSel == 'additive')
     	{
-    		label(ctx,100,100,this.currOscFrq1,0);
+    		
     		/*ctx.beginPath();
     		ctx.moveTo(window.innerWidth/2, 0);
 	  	    ctx.lineTo(window.innerWidth/2,window.innerHeight);	  	    
