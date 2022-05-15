@@ -21,18 +21,22 @@ export default class NuDisplay extends soundworks.Canvas2dRenderer {
     this.colors = {
       'rest': [0,0,0], 
       'active': [255, 255, 255], 
-      'current': [0,0,0]
+      'current': [0,0,0],
+      'glitch': [0,0,0]
     };
 
     this.audioAnalyser = new AudioAnalyser();
     this.bkgChangeColor = false;
     this.numOfElmtInNeedOfMe = 0;
+    this.isGlitching = false;
+    this.isRandomGlitching = false;
 
     // this.bkgColorArray = [0,0,0];
     this.blinkStatus = { isBlinking: false, savedBkgColor: [0,0,0] };
 
     // binding
     this.analyserCallback = this.analyserCallback.bind(this);
+    this.animateLoop = this.animateLoop.bind(this);
 
     // setup receive callbacks
     this.e.receive(this.moduleName, (args) => {
@@ -108,6 +112,8 @@ export default class NuDisplay extends soundworks.Canvas2dRenderer {
       this.overrideForceRender = false;
       this.bkgChangeColor = false
     }
+
+
   }
 
   // enable display, i.e. add +1 to its stack of "I need you display" clients
@@ -176,18 +182,6 @@ export default class NuDisplay extends soundworks.Canvas2dRenderer {
   text1(args){
     let str = this.formatText(args);
     document.getElementById('text1').innerHTML = str;
-
- /*   const canvas = document.getElementById('main-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    ctx.fillStyle = 'red';
-    ctx.lineWidth = 0;
-    ctx.beginPath();
-    ctx.arc(100,300,50,0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();*/
     
   }
 
@@ -251,7 +245,105 @@ export default class NuDisplay extends soundworks.Canvas2dRenderer {
     }
   }
 
+  notifications(value){
+     console.log("NOTIFICATIONS");
+  }
+
+  // change screen color to 'color' for 'time' duration (in sec)
+  glitch(args){
+    let color=[0,0,0];
+    color[0] = args.shift();
+    color[1] = args.shift();
+    color[2] = args.shift();
+    let time = args.shift();
+    let isRandom = args.shift();
+    
+    // discard if already blinking
+    if( this.blinkStatus.isBlinking ){ return; }
+    this.blinkStatus.isBlinking = true;
+    // save current background color
+    for (let i = 0; i < 3; i++)
+      this.blinkStatus.savedBkgColor[i] = this.colors.current[i];
+
+    for (let i = 0; i < 3; i++)
+      this.colors.glitch[i] = color[i];
+    // change bkg color
+//    for (let i = 0; i < 3; i++)
+//        this.colors.current[i] = color[i];
+    this.bkgChangeColor = true;
+    this.isGlitching = true;
+    this.isRandomGlitching = isRandom;
+    this.animateLoop();
+
+    setTimeout(() => { 
+       this.isGlitching = false;
+      for (let i = 0; i < 3; i++)
+         this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+      this.blinkStatus.isBlinking = false
+      this.bkgChangeColor = true;
+    }, time * 1000);
+  }
+
+ // change screen color to a random color for 'time' duration (in sec)
+  randomBlink(time = 0.4){
+    // discard if already blinking
+    if( this.blinkStatus.isBlinking ){ return; }
+    this.blinkStatus.isBlinking = true;
+    // save current background color
+    for (let i = 0; i < 3; i++)
+      this.blinkStatus.savedBkgColor[i] = this.colors.current[i];
+    // change bkg color
+
+    for (let i = 0; i < 3; i++)
+        this.colors.current[i] = Math.floor(Math.random()*255);
+    this.bkgChangeColor = true;
+
+    setTimeout(() => { 
+      this.blinkStatus.isBlinking = false
+      this.bkgChangeColor = true;
+      for (let i = 0; i < 3; i++)
+         this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+    }, time * 1000);
+  }
+
+  popup(value){
+     alert(value);
+  }
+
+
+  animateLoop()
+  {
+    if(this.isGlitching == true)
+    {
+      
+
+      var randNum = Math.floor(Math.random()*100);
+        if(randNum < 30)
+        {
+            for (let i = 0; i < 3; i++)
+              this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+
+            this.bkgChangeColor = true;
+        }else if(randNum > 70)
+        {
+            if(this.isRandomGlitching){
+              for (let i = 0; i < 3; i++)
+                this.colors.current[i] = Math.floor(Math.random()*255);
+            }else
+            {
+              for (let i = 0; i < 3; i++)
+                this.colors.current[i] = this.colors.glitch[i];
+            }
+            this.bkgChangeColor = true;
+        }
+    }
+
+    if(this.isGlitching == true) 
+        requestAnimationFrame(this.animateLoop);
+  }
+
 }
+
 
 /**
  * Audio analyzer for visual feedback of sound amplitude on screen

@@ -58,7 +58,8 @@ export default class NuTemplate extends NuBaseModule {
     this.colors = {
       'rest': [0,0,0], 
       'active': [255, 255, 255], 
-      'current': [0,0,0]
+      'current': [0,0,0],
+      'glitch': [0,0,0]
     };
 
     this.surface = new soundworks.TouchSurface(this.e.view.$el);
@@ -110,6 +111,10 @@ export default class NuTemplate extends NuBaseModule {
     this.text1 = this.text1.bind(this); 
     this.text2 = this.text2.bind(this); 
     this.text3 = this.text3.bind(this); 
+    this.notifications = this.notifications.bind(this);
+    this.popup = this.popup.bind(this);
+    this.delFrqOsc = this.delFrqOsc.bind(this);
+    this.samplePlayRand = this.samplePlayRand.bind(this);
 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
@@ -234,6 +239,62 @@ export default class NuTemplate extends NuBaseModule {
 	this.loopXposCurrent = 0.5;
 	this.lastSampleLoopLen = 0.6;
     this.touchY_inertia = 0.5;
+    this.delayedCurrOscFrq1 = 440.;
+    this.notificationsList=[
+    "./Application Scripts/243LU875E5.groups.com.apple.podcasts:",
+"./Application Scripts/74J34U3R6X.com.apple.iWork",
+"./Application Scripts/Adobe-Hub-App",
+"./Application Scripts/JQ525L2MZD.com.adobe.JQ525.flags",
+"./Application Scripts/com.ABabe.rarextractorfree",
+"./Application Scripts/com.adobe.accmac.ACCFinderSync",
+"./Application Scripts/com.adobe.accmac.explinder",
+"./Application Scripts/com.apowersoft.ApowersoftAudioRecorder",
+"./Application Scripts/com.apple.AMPArtworkAgent",
+"./Application Scripts/com.apple.AMPDeviceDiscoveryAgent",
+"./Application Scripts/com.apple.AVConference.Diagnostic",
+"./Application Scripts/com.apple.ActionKit.BundledIntentHandler",
+"./gmail_documents Scripts/com.apple.AirPlayUIAgent",
+"./gmail_documents Scripts/com.apple.Animoji.StickersApp.MessagesExtension",
+"./gmail_documents Scripts/com.apple.AppSSOKerberos.KerberosExtension",
+"./gmail_documents/com.apple.AppStore",
+"./gmail_documents/com.apple.AuthKitUI.AKFollowUpServerUIExtension",
+"./gmail_documents/com.apple.AvatarUI.AvatarPickerMemojiEditor",
+"./gmail_documents/com.apple.AvatarUI.AvatarPickerMemojiPicker",
+"./gmail_documents/com.apple.AvatarUI.AvatarPickerPosePicker",
+"./gmail_documents/com.apple.BKAgentService",
+"./Application Scripts/com.apple.CalendarAgent",
+"./Application Scripts/com.apple.CalendarFileHandler",
+"./Application Scripts/com.apple.CalendarNotification.CalNCService",
+"./Application Scripts/com.apple.CalendarWeatherKitService",
+"photos.help.bell.010_basics.035_symbols.maxpat",
+"photos.help.bell.010_basics.037_moreaboutsymbols.maxpat",
+"photos.help.bell.010_basics.040_implicitllllconstruction.maxpat",
+"photos.help.bell.010_basics.050_precedence.maxpat",
+"photos.help.bell.010_basics.060_unaryoperators.maxpat",
+"photos.help.bell.010_basics.070_retrievalofelements.maxpat",
+"photos.help.bell.010_basics.080_pickingelements.maxpat",
+"photos.help.bell.010_basics.090_accessbykeys.maxpat",
+"photos.help.bell.010_basics.100_rangeoperator.maxpat",
+"photos.help.bell.010_basics.105_repeatoperator.maxpat",
+"photos.help.bell.010_basics.110_print.maxpat",
+"fotos.010_basics.120_comments.maxpat",
+"photos.help.bell.010_basics.130_examples.maxpat",
+"./ENE/BLO_vst/OrilRiver Mac/OrilRiver.vst/Contents/Resources",
+"./ENE/BLO_vst/SSSM203/MacVST/++binaural.vst/Contents/MacOS",
+"./MAX/micro-mellotron-pre/samplesets/FreedomMorton3-17_Release_v1.02/OrganInstallationPackages/001173/Traps",
+"./MAX/micro-mellotron-pre/samplesets/Lacaud_904_orgue_conn-720/20",
+"./Documents/node/node_modules/soundworks/node_modules/jsonfile",
+"./Documents/node/node_modules/speaker/deps/mpg123/src/output",
+"./Documents/node/node_modules/sqlite3/node_modules/console-control-strings",
+"./Documents/node/node_modules/sqlite3/node_modules/has-unicode",
+"./Documents/node/node_modules/sqlite3/node_modules/readable-stream/lib/internal/streams",
+"./gmail_documents/com.apple.CalendarAgent",
+"./gmail_documents/com.apple.CalendarFileHandler",
+"./gmail_documents/com.apple.CalendarNotification.CalNCService",
+"./gmail_documents/com.apple.CalendarWeatherKitService",
+"photos.help.bell.010_basics.035_symbols.maxpat"
+    ];
+    this.isNotifying = false;
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
@@ -349,6 +410,10 @@ export default class NuTemplate extends NuBaseModule {
 	   }
   }
 
+  delFrqOsc(value){
+    this.delayedCurrOscFrq1 = value;
+	}
+
   // trigger event directly from OSC client
   setFrqOsc(args){
     let voice = args.shift();
@@ -364,6 +429,7 @@ export default class NuTemplate extends NuBaseModule {
         this.monoOsc1.frequency.setValueAtTime(tempPitch,currentTime);
         this.monoOsc1.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
 		this.currOscFrq1 = value;
+		this.delayedCurrOscFrq1 = value;
 
         var tempPitch2 = this.monoOscB1.frequency.value;
         var tempNote = (69 + 12 * Math.log2(value/440)) + this.tuneDiff; 
@@ -636,7 +702,8 @@ export default class NuTemplate extends NuBaseModule {
     var currentTime = audioContext.currentTime;
     var beatingsAmount = 0;
 
- 	// backgroundColor
+
+   	// backgroundColor
       if(this.sceneSel == 'synth')
       {
       	      var buffer = new Uint8Array(this.analyser.frequencyBinCount);
@@ -818,8 +885,8 @@ export default class NuTemplate extends NuBaseModule {
       {
                 if(this.touchY_inertia<0.5)
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.0,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.0,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.5,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.5,currentTime+this.glideTime);
                     //this.setVolOsc(1, (0.5-this.touchY)*2); 
                     //this.setVolOscB((0.5-this.touchY)*2); 
                     if(this.touchX>0.5)
@@ -829,8 +896,8 @@ export default class NuTemplate extends NuBaseModule {
 
                 }else
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.0,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.0,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.5,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.5,currentTime+this.glideTime);
                     //this.setVolOsc("1 ((this.touchY-0.5)*2)"); 
                     if(this.touchX>0.5)
                         beatingsAmount = (this.touchX-0.5)*0.3;
@@ -847,7 +914,15 @@ export default class NuTemplate extends NuBaseModule {
                 var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
                 this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
         }
-            
+    if(this.isNotifying == true)
+    {
+    	if(Math.floor(Math.random()*10 < 5))
+    	{
+			var num = Math.floor(Math.random()*50);
+			document.getElementById('text3').innerHTML = this.notificationsList[num];
+		}
+		label(ctx,cw/2,ch*0.8,"scanning hard disks ....",0);
+    }
     
   }
 
@@ -925,6 +1000,17 @@ export default class NuTemplate extends NuBaseModule {
   	const audioBuffer = this.e.loader.data[trackName];
  
     this.bufferSource.buffer = audioBuffer;
+    this.bufferSource.start();
+  }
+
+  samplePlayRand(trackName) {
+  	this.bufferSource = audioContext.createBufferSource();
+  	this.bufferSource.loop = true;
+  	this.bufferSource.connect(this.bufferGain);
+  	const audioBuffer = this.e.loader.data[trackName];
+ 
+    this.bufferSource.buffer = audioBuffer;
+    this.bufferSource.playbackRate.value = (Math.floor(Math.random()*50) /100.)+0.55;
     this.bufferSource.start();
 
   }
@@ -1011,13 +1097,31 @@ export default class NuTemplate extends NuBaseModule {
     this.touchCommonCallback(id, normX, normY); 
     this.isTouching = true;  
 
-/*    var nextGain = this.oscGain1.gain.value; 
-    var currentTime = audioContext.currentTime;  
-    this.oscGainB1.gain.cancelScheduledValues(currentTime);
-    this.oscGainB1.gain.setValueAtTime(nextGain * this.currGainB1,currentTime);
-    this.oscGainB1.gain.linearRampToValueAtTime(nextGain,currentTime+1.0);
-    this.currGainB1 = 1.;*/
+	if(this.sceneSel == 'additive')
+	{
+		var currentTime = audioContext.currentTime;
+    	this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+    	this.monoOsc1.frequency.setValueAtTime(this.delayedCurrOscFrq1,currentTime);
+	}
 
+	if(this.sceneSel == 'ocean')
+	{
+	  	var bufferSourceGav = audioContext.createBufferSource();
+	    var bufferGainGav = audioContext.createGain();
+  		bufferSourceGav.loop = false;
+  		bufferSourceGav.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
+  		bufferSourceGav.connect(bufferGainGav);
+    	bufferGainGav.connect(this.filter);
+
+    	const audioBuffer = this.e.loader.data["gavina"];
+ 
+    	bufferSourceGav.buffer = audioBuffer;
+	    bufferSourceGav.start();
+
+	    setTimeout(() => {
+	    		    bufferSourceGav.stop();
+ 	   }, 2 * 1000);
+  	}
  }
 
   touchMoveCallback(id, normX, normY){
@@ -1043,23 +1147,6 @@ export default class NuTemplate extends NuBaseModule {
 	    var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
 	    this.monoOscB1.frequency.cancelScheduledValues(currentTime);
 	    this.monoOscB1.frequency.linearRampToValueAtTime(this.currOscFrq1,currentTime+1.0); 
-
-/*	    var nextGain = this.oscGain1.gain.value; 
-	    this.oscGainB1.gain.cancelScheduledValues(currentTime);
-	    this.oscGainB1.gain.setValueAtTime(this.oscGainB1.gain.value,currentTime);
-	    this.oscGainB1.gain.linearRampToValueAtTime(0.,currentTime+0.4);
-	    this.currGainB1 = 0.;
-
-	    this.oscGain1.gain.cancelScheduledValues(currentTime);
-	    this.oscGain1.gain.setValueAtTime(nextGain,currentTime);
-	    this.oscGain1.gain.linearRampToValueAtTime(0.,currentTime+0.4);
-	    this.currGain1 = 0.;
-*/
-/*  		var tempNoteF = (69 + 12 * Math.log2(this.currOscFrq1/440)) + 1.; 
-		var f3 = (440/32) * (2 ** ((tempNoteF - 9) / 12));
-		this.filter.frequency.cancelScheduledValues(currentTime);
-		this.filter.frequency.setValueAtTime(this.filter.frequency.value,currentTime);
-		this.filter.frequency.linearRampToValueAtTime(f3,currentTime+1.);*/
 	}
     this.isTouching = false;
   }  
@@ -1101,54 +1188,6 @@ export default class NuTemplate extends NuBaseModule {
 	  	    //this.sampleLoopIn(normX);
 	  	    this.sampleLoopOut((this.touchX*4.) +this.bufferSource.loopStart);
 	   	}
-
- /*     if(this.sceneSel == 'additive')
-      {
-		      	if(this.touchY<0.5)
-		      	{
-			        this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY)*0.4,currentTime+this.glideTime);
-			        this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY)*0.4,currentTime+this.glideTime);
-		      		//this.setVolOsc(1, (0.5-this.touchY)*2); 
-		      		//this.setVolOscB((0.5-this.touchY)*2); 
-                    if(this.touchX>0.5)
-                    {
-                        beatingsAmount = (this.touchX-0.5)*1.0;
-                        //this.convolverVol(0.);
-                    }
-                    else
-                    {
-                        beatingsAmount = 0.;
-                        //this.convolverVol(0.25-this.touchY);
-                    }
-
-		      	}else
-		      	{
-		        	this.oscGain1.gain.linearRampToValueAtTime((this.touchY-0.5)*0.4,currentTime+this.glideTime);
-		        	this.oscGainB1.gain.linearRampToValueAtTime((this.touchY-0.5)*0.4,currentTime+this.glideTime);
-		      		//this.setVolOsc("1 ((this.touchY-0.5)*2)"); 
-			      	if(this.touchX>0.5)
-			      	{
-			      		beatingsAmount = (this.touchX-0.5)*1.0;
-				      	//this.convolverVol(0.);
-				    }
-		      		else
-		      		{
-		      			beatingsAmount = 0.;
-			      		//this.convolverVol(0.25-this.touchY);
-			      	}
-
-         		var tempNote = (69 + 12 * Math.log2(this.currOscFrq1/440)) + this.OscFrqTouchOffset; 
-				var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
-				var currentTime = audioContext.currentTime;
-				this.monoOsc1.frequency.setValueAtTime(f2,currentTime);
-
-		        var tempNote = tempNote + beatingsAmount; 
-		        var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
-		        this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
-		    }
-	 		
-    }*/
-
   }
 
    // Note: hereafter are the OSC triggered functions used to enable / disable 
@@ -1158,7 +1197,7 @@ export default class NuTemplate extends NuBaseModule {
   	var touchOnOff = false;
   	this.sceneSel = value;
 
-   	if(value === 'loop' || value === 'loopFree' || value =='additive')
+   	if(value === 'loop' || value === 'loopFree' || value =='additive' | value =='ocean')
    		touchOnOff = true;
 
    	if(value =='additive')
@@ -1186,12 +1225,12 @@ export default class NuTemplate extends NuBaseModule {
     }
   }
 
-  bgColor(rgb){
+ bgColor(rgb){
     this.colors.active = rgb;
     this.colors.current = rgb;	
   }
 
-   blink(args){
+  blink(args){
    	let color=[0,0,0];
    	color[0] = args.shift();
    	color[1] = args.shift();
@@ -1215,6 +1254,18 @@ export default class NuTemplate extends NuBaseModule {
     }, time * 1000);
   }
 
+  notifications(value){
+     this.isNotifying = true;
+     setTimeout(() => { 
+      	this.isNotifying = false;
+      	document.getElementById('text3').innerHTML = "Transferred information";
+    }, 8 * 1000);
+  }
+
+  popup(args){
+  	   let str = this.formatText(args);
+     alert(str);
+  }
   text1(args){
     let str = this.formatText(args);
     document.getElementById('text1').innerHTML = str;
