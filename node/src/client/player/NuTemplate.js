@@ -115,7 +115,8 @@ export default class NuTemplate extends NuBaseModule {
     this.popup = this.popup.bind(this);
     this.delFrqOsc = this.delFrqOsc.bind(this);
     this.samplePlayRand = this.samplePlayRand.bind(this);
-
+    this.sampleOneShot = this.sampleOneShot.bind(this);
+ 
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
     // setup receive callbacks
@@ -294,7 +295,25 @@ export default class NuTemplate extends NuBaseModule {
 "./gmail_documents/com.apple.CalendarWeatherKitService",
 "photos.help.bell.010_basics.035_symbols.maxpat"
     ];
+
+this.notificationsChismesList=[
+    "ja m'havia semblat que era culpable",
+	"és escoria",
+	"./Application Scripts/Adobe-Hub-App",
+	"./Application Scripts/JQ525L2MZD.com.adobe.JQ525.flags",
+	"./Application Scripts/com.ABabe.rarextractorfree",
+	"./Application Scripts/com.adobe.accmac.ACCFinderSync",
+	"./Application Scripts/com.adobe.accmac.explinder",
+	"./Application Scripts/com.apowersoft.ApowersoftAudioRecorder",
+	"./Application Scripts/com.apple.AMPArtworkAgent",
+	"./Application Scripts/com.apple.AMPDeviceDiscoveryAgent",
+	"./Application Scripts/com.apple.AVConference.Diagnostic",
+	"photos.help.bell.010_basics.035_symbols.maxpat"
+    ];
     this.isNotifying = false;
+    this.isNotifyingChismes = false;
+    this.chismesCounter = 0;
+    this.inputText = "";
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
@@ -411,6 +430,7 @@ export default class NuTemplate extends NuBaseModule {
   }
 
   delFrqOsc(value){
+  	console.log("IN");
     this.delayedCurrOscFrq1 = value;
 	}
 
@@ -885,8 +905,8 @@ export default class NuTemplate extends NuBaseModule {
       {
                 if(this.touchY_inertia<0.5)
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.5,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.5,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*2.0,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*2.0,currentTime+this.glideTime);
                     //this.setVolOsc(1, (0.5-this.touchY)*2); 
                     //this.setVolOscB((0.5-this.touchY)*2); 
                     if(this.touchX>0.5)
@@ -896,8 +916,8 @@ export default class NuTemplate extends NuBaseModule {
 
                 }else
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.5,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.5,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*2.0,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*2.0,currentTime+this.glideTime);
                     //this.setVolOsc("1 ((this.touchY-0.5)*2)"); 
                     if(this.touchX>0.5)
                         beatingsAmount = (this.touchX-0.5)*0.3;
@@ -923,6 +943,26 @@ export default class NuTemplate extends NuBaseModule {
 		}
 		label(ctx,cw/2,ch*0.8,"scanning hard disks ....",0);
     }
+
+    if(this.isNotifyingChismes == true)
+    {
+    	if(Math.floor(Math.random()*50 < 1))
+    	{
+			if(this.chismesCounter < 20)
+				document.getElementById('text3').innerHTML = this.notificationsList[this.chismesCounter];
+			this.chismesCounter ++;
+		}
+		label(ctx,cw/2,ch*0.8,"Els vostres comentaris:",0);
+    }
+
+ /*  	if(this.sceneSel == 'additive')
+	{
+		//console.log(this.delayedCurrOscFrq1);
+		var currentTime = audioContext.currentTime;
+    	this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+    	this.monoOsc1.frequency.setValueAtTime(100,currentTime);
+    	this.currOscFrq1 = this.delayedCurrOscFrq1;
+	}*/
     
   }
 
@@ -1012,9 +1052,25 @@ export default class NuTemplate extends NuBaseModule {
     this.bufferSource.buffer = audioBuffer;
     this.bufferSource.playbackRate.value = (Math.floor(Math.random()*50) /100.)+0.55;
     this.bufferSource.start();
-
   }
 
+  sampleOneShot(trackName) {
+    	var bufferSourceOne = audioContext.createBufferSource();
+	    var bufferGainOne = audioContext.createGain();
+  		bufferSourceOne.loop = false;
+  		bufferSourceOne.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
+  		bufferSourceOne.connect(bufferGainOne);
+    	bufferGainOne.connect(this.filter);
+
+    	const audioBuffer = this.e.loader.data[trackName];
+ 
+    	bufferSourceOne.buffer = audioBuffer;
+	    bufferSourceOne.start();
+
+	    setTimeout(() => {
+	    		    bufferSourceOne.stop();
+ 	   }, 2 * 1000);
+}
   sampleLoopIn(start) {
     this.bufferSource.loopStart = start;
   }
@@ -1099,9 +1155,11 @@ export default class NuTemplate extends NuBaseModule {
 
 	if(this.sceneSel == 'additive')
 	{
+		console.log(this.delayedCurrOscFrq1);
 		var currentTime = audioContext.currentTime;
     	this.monoOsc1.frequency.cancelScheduledValues(currentTime);
-    	this.monoOsc1.frequency.setValueAtTime(this.delayedCurrOscFrq1,currentTime);
+    	this.monoOsc1.frequency.setValueAtTime(200,currentTime);
+    	this.currOscFrq1 = this.delayedCurrOscFrq1;
 	}
 
 	if(this.sceneSel == 'ocean')
@@ -1255,17 +1313,36 @@ export default class NuTemplate extends NuBaseModule {
   }
 
   notifications(value){
-     this.isNotifying = true;
-     setTimeout(() => { 
-      	this.isNotifying = false;
-      	document.getElementById('text3').innerHTML = "Transferred information";
-    }, 8 * 1000);
-  }
+  	if(value == 0)
+  	{	
+ 	 	console.log("noti");
+  		this.chismesCounter = 0;
+      	document.getElementById('text3').innerHTML = this.inputText;
+	     this.isNotifyingChismes = true;
+	     setTimeout(() => { 
+	      	this.isNotifyingChismes = false;
+	      	document.getElementById('text3').innerHTML = "segur que no soc un bot?";
+	    }, 13 * 1000);
+ 	}
+  	if(value == 1)
+  	{
+	     this.isNotifying = true;
+	     setTimeout(() => { 
+	      	this.isNotifying = false;
+	      	document.getElementById('text3').innerHTML = "Transferred information";
+	    }, 8 * 1000);
+ 	}  }
 
   popup(args){
-  	   let str = this.formatText(args);
-     alert(str);
+  	let str = this.formatText(args);
+    alert(str);
   }
+
+  popupTextBox(args){
+  	let str = this.formatText(args);
+    this.inputText = prompt(str);
+  }
+
   text1(args){
     let str = this.formatText(args);
     document.getElementById('text1').innerHTML = str;
@@ -1328,6 +1405,9 @@ function canvas_arrow(context, fromx, fromy, tox, toy){
 
 function label(ctx,posx, posy, text, angle)
 {
+	ctx.fillStyle = 'white';
+	ctx.strokeStyle = 'white';
+	ctx.lineWidth = 2;
     ctx.save();
 	ctx.translate(posx, posy);
 	ctx.rotate(angle);
