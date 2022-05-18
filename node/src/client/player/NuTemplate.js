@@ -106,6 +106,7 @@ export default class NuTemplate extends NuBaseModule {
     this.delayFbk = this.delayFbk.bind(this); // delay feedback gain
     this.delayTime = this.delayTime.bind(this); // delay time
     this.animateLoop = this.animateLoop.bind(this); // every frame loop animation
+    this.animateNotification = this.animateNotification.bind(this); // every frame loop animation
     this.bgColor = this.bgColor.bind(this); // background color
     this.blink = this.blink.bind(this); // background color
     this.text1 = this.text1.bind(this); 
@@ -116,6 +117,10 @@ export default class NuTemplate extends NuBaseModule {
     this.delFrqOsc = this.delFrqOsc.bind(this);
     this.samplePlayRand = this.samplePlayRand.bind(this);
     this.sampleOneShot = this.sampleOneShot.bind(this);
+    this.animate2Frq1 = this.animate2Frq1.bind(this);
+    this.animate2Frq2 = this.animate2Frq2.bind(this);
+    this.osc2Frq = this.osc2Frq.bind(this);
+    this.osc2FrqOff = this.osc2FrqOff.bind(this);
  
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
@@ -298,22 +303,37 @@ export default class NuTemplate extends NuBaseModule {
 
 this.notificationsChismesList=[
     "ja m'havia semblat que era culpable",
-	"és escoria",
-	"./Application Scripts/Adobe-Hub-App",
-	"./Application Scripts/JQ525L2MZD.com.adobe.JQ525.flags",
-	"./Application Scripts/com.ABabe.rarextractorfree",
-	"./Application Scripts/com.adobe.accmac.ACCFinderSync",
-	"./Application Scripts/com.adobe.accmac.explinder",
-	"./Application Scripts/com.apowersoft.ApowersoftAudioRecorder",
-	"./Application Scripts/com.apple.AMPArtworkAgent",
-	"./Application Scripts/com.apple.AMPDeviceDiscoveryAgent",
-	"./Application Scripts/com.apple.AVConference.Diagnostic",
-	"photos.help.bell.010_basics.035_symbols.maxpat"
+  "és escoria",
+  "get, pareu amb aixo",
+  "es indignant",
+  "a la horca",
+  "les multinacionals son les millors",
+  "google ens salvarà",
+  "Zuckelberg sembla un bon paio, mai ens faria això",
+  "és gratis, que mes vols",
+  "les empreses privades son les fan moure el món",
+  "és un bon servei",
+  "quin mal hi ha a donar les dades?",
+      "ja m'havia semblat que era culpable",
+  "és escoria",
+  "get, pareu amb aixo",
+  "es indignant",
+  "a la horca",
+  "les multinacionals son les millors",
+  "google ens salvarà",
+  "Zuckelberg sembla un bon paio, mai ens faria això",
+  "és gratis, que mes vols",
+  "les empreses privades son les fan moure el món"
     ];
     this.isNotifying = false;
     this.isNotifyingChismes = false;
     this.chismesCounter = 0;
     this.inputText = "";
+
+    this.frq2frq1 = 440.;
+    this.frq2frq2 = 440.;
+    this.frq2time = 600;
+    this.frq2On = false;
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
@@ -804,33 +824,11 @@ this.notificationsChismesList=[
     	if(this.sceneSel == 'additive')
     	{
     		
-    		/*ctx.beginPath();
-    		ctx.moveTo(window.innerWidth/2, 0);
-	  	    ctx.lineTo(window.innerWidth/2,window.innerHeight);	  	    
-	  	    ctx.closePath();
-	        ctx.stroke();*/
-
-	    	if(this.isTouching && this.touchX < 0.4)
-	    	{
-	 			label(ctx,cw/2,ch*0.22,"+harmonics",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.07), ch*0.22-(ch*0.011), cw/2-(cw*0.1), ch*0.22-(ch*0.011));
-	    	}
-	    	if(this.isTouching && this.touchX > 0.6)
-	    	{
-	 			label(ctx,cw/2,ch*0.22,"+desafinat",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.1), ch*0.22-(ch*0.011), cw/2-(cw*0.07), ch*0.22-(ch*0.011));
+	 			label(ctx,cw/2+(cw*0.02),ch*0.22,"+tremolo ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.16), ch*0.22-(ch*0.011), cw/2-(cw*0.13), ch*0.22-(ch*0.011));
 	    	
-	    	}
-	    	if(this.isTouching && this.touchY < 0.4)
-	    	{
-	 			label(ctx,cw/2,ch*0.24,"+tremolo  ",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24, cw/2-(cw*0.085), ch*0.24-(ch*0.02));
-	    	}
-	    	if(this.isTouching && this.touchY > 0.6)
-	    	{
-	 			label(ctx,cw/2,ch*0.24,"+reverb   ",0);
-		    	canvas_arrow(ctx, cw/2 -(cw*0.085), ch*0.24-(ch*0.02), cw/2-(cw*0.085), ch*0.24);
-	    	}
+	 			label(ctx,cw/2+(cw*0.02),ch*0.24,"+volum   ",0);
+		    	canvas_arrow(ctx, cw/2 -(cw*0.145), ch*0.24, cw/2-(cw*0.145), ch*0.24-(ch*0.02));
 	 		
 		}
 
@@ -905,8 +903,8 @@ this.notificationsChismesList=[
       {
                 if(this.touchY_inertia<0.5)
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*2.0,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*2.0,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.7,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((0.5-this.touchY_inertia)*1.7,currentTime+this.glideTime);
                     //this.setVolOsc(1, (0.5-this.touchY)*2); 
                     //this.setVolOscB((0.5-this.touchY)*2); 
                     if(this.touchX>0.5)
@@ -916,8 +914,8 @@ this.notificationsChismesList=[
 
                 }else
                 {
-                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*2.0,currentTime+this.glideTime);
-                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*2.0,currentTime+this.glideTime);
+                    this.oscGain1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.7,currentTime+this.glideTime);
+                    this.oscGainB1.gain.linearRampToValueAtTime((this.touchY_inertia-0.5)*1.7,currentTime+this.glideTime);
                     //this.setVolOsc("1 ((this.touchY-0.5)*2)"); 
                     if(this.touchX>0.5)
                         beatingsAmount = (this.touchX-0.5)*0.3;
@@ -934,36 +932,48 @@ this.notificationsChismesList=[
                 var f2 = (440/32) * (2 ** ((tempNote - 9) / 12));
                 this.monoOscB1.frequency.setValueAtTime(f2,currentTime);
         }
+ 
+  }
+
+ animateNotification()
+  {
+      const canvas = document.getElementById('main-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      var cw = window.innerWidth;
+      var ch = window.innerHeight;
+
+      ctx.fillStyle = 'white';
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      
+
     if(this.isNotifying == true)
     {
-    	if(Math.floor(Math.random()*10 < 5))
-    	{
-			var num = Math.floor(Math.random()*50);
-			document.getElementById('text3').innerHTML = this.notificationsList[num];
-		}
-		label(ctx,cw/2,ch*0.8,"scanning hard disks ....",0);
+        if(Math.floor(Math.random()*10 < 5))
+        {
+            var num = Math.floor(Math.random()*50);
+            document.getElementById('text3').innerHTML = this.notificationsList[num];
+        }
+        label(ctx,cw/2,ch*0.8,"scanning hard disks ....",0);
     }
 
     if(this.isNotifyingChismes == true)
     {
-    	if(Math.floor(Math.random()*50 < 1))
-    	{
-			if(this.chismesCounter < 20)
-				document.getElementById('text3').innerHTML = this.notificationsList[this.chismesCounter];
-			this.chismesCounter ++;
-		}
-		label(ctx,cw/2,ch*0.8,"Els vostres comentaris:",0);
+        if(Math.floor(Math.random()*50 < 1))
+        {
+            if(this.chismesCounter < 20)
+                document.getElementById('text3').innerHTML = this.notificationsList[this.chismesCounter];
+            this.chismesCounter ++;
+        }
+        label(ctx,cw/2,ch*0.8,"Els vostres comentaris:",0);
     }
 
- /*  	if(this.sceneSel == 'additive')
-	{
-		//console.log(this.delayedCurrOscFrq1);
-		var currentTime = audioContext.currentTime;
-    	this.monoOsc1.frequency.cancelScheduledValues(currentTime);
-    	this.monoOsc1.frequency.setValueAtTime(100,currentTime);
-    	this.currOscFrq1 = this.delayedCurrOscFrq1;
-	}*/
-    
+    if(this.isNotifying || this.isNotifyingChismes) 
+        requestAnimationFrame(this.animateNotification);
+      else
+        ctx.clearRect(0,0,canvas.width, canvas.height);
   }
 
   setFunctionLfo(value){
@@ -1032,6 +1042,50 @@ this.notificationsChismesList=[
   	this.currentLfoType = value;
     this.lfo.type = value; 
   }
+
+osc2Frq(args){
+    var midiNote1 =  args.shift();
+    var midiNote2 =  args.shift();
+    this.time2frq = args.shift();
+    this.frq2On = true;
+
+ //   this.setFunctionLfo('filter');
+    this.lfo.frequency.value = (Math.floor(Math.random()*30) /100.);
+
+    this.frq2frq1= (440/32) * (2 ** ((midiNote1 - 9) / 12));
+    this.frq2frq2= (440/32) * (2 ** ((midiNote2 - 9) / 12));
+    if(this.frq2On)
+        this.animate2Frq1();
+  }
+
+osc2FrqOff(args){
+    this.frq2On = false;
+}
+
+animate2Frq1(){
+    var currentTime = audioContext.currentTime;
+    this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+    this.monoOsc1.frequency.setValueAtTime(this.currOscFrq1,currentTime);
+    this.monoOsc1.frequency.linearRampToValueAtTime(this.frq2frq1,currentTime+this.glideTime/15);
+    this.currOscFrq1 = this.frq2frq1;
+    
+    setTimeout(() => { 
+        if(this.frq2On == true) 
+            requestAnimationFrame(this.animate2Frq2);
+    }, this.time2frq);
+  }
+animate2Frq2(){
+    var currentTime = audioContext.currentTime;
+    this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+    this.monoOsc1.frequency.setValueAtTime(this.currOscFrq1,currentTime);
+    this.monoOsc1.frequency.linearRampToValueAtTime(this.frq2frq2,currentTime+this.glideTime/15);
+    this.currOscFrq1 = this.frq2frq2;
+    setTimeout(() => { 
+        if(this.frq2On == true) 
+            requestAnimationFrame(this.animate2Frq1);
+    }, this.time2frq);
+  }
+
 
   samplePlay(trackName) {
   	this.bufferSource = audioContext.createBufferSource();
@@ -1313,22 +1367,23 @@ this.notificationsChismesList=[
   }
 
   notifications(value){
-  	if(value == 0)
+  	if(value == 'chismes')
   	{	
- 	 	console.log("noti");
   		this.chismesCounter = 0;
       	document.getElementById('text3').innerHTML = this.inputText;
 	     this.isNotifyingChismes = true;
+         this.animateNotification();
 	     setTimeout(() => { 
 	      	this.isNotifyingChismes = false;
 	      	document.getElementById('text3').innerHTML = "segur que no soc un bot?";
 	    }, 13 * 1000);
  	}
-  	if(value == 1)
+  	if(value == 'data')
   	{
 	     this.isNotifying = true;
+         this.animateNotification();
 	     setTimeout(() => { 
-	      	this.isNotifying = false;
+          	this.isNotifying = false;
 	      	document.getElementById('text3').innerHTML = "Transferred information";
 	    }, 8 * 1000);
  	}  }
@@ -1360,6 +1415,7 @@ this.notificationsChismesList=[
     document.getElementById('text3').innerHTML = str;
   }
 
+  
   // convert array of elements to string
   formatText(args){
     let str = '';

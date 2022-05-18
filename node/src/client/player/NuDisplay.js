@@ -209,7 +209,7 @@ this.notificationsChismesList=[
             var num = Math.floor(Math.random()*50);
             document.getElementById('text3').innerHTML = this.notificationsList[num];
           }
-          label(ctx2,cw,ch*0.8,"scanning hard disks ....",0);
+          //label(ctx2,cw,ch*0.8,"scanning hard disks ....",0);
       }
 
       if(this.isNotifyingChismes == true)
@@ -220,7 +220,7 @@ this.notificationsChismesList=[
               document.getElementById('text3').innerHTML = this.notificationsChismesList[this.chismesCounter];
             this.chismesCounter ++;
           }
-          label(ctx2,cw/2,ch*0.8,"Els vostres comentaris:",0);
+          //label(ctx2,cw/2,ch*0.8,"Els vostres comentaris:",0);
       }
   }
 
@@ -411,7 +411,7 @@ this.notificationsChismesList=[
   }
 
   notifications(value){
-    if(value == 0)
+    if(value == 'chismes')
     { 
       this.chismesCounter = 0;
         document.getElementById('text3').innerHTML = this.inputText;
@@ -421,7 +421,7 @@ this.notificationsChismesList=[
           document.getElementById('text3').innerHTML = "segur que no soc un bot?";
       }, 13 * 1000);
     }
-    if(value == 1)
+    if(value == 'data')
     {
        this.isNotifying = true;
        setTimeout(() => { 

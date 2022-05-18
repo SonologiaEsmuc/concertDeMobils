@@ -98,7 +98,7 @@ p {
 // create the soft blink animation from keyframe mixin
 @include keyframes(soft-blink) {
   0% { opacity: 1.0; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.5; }
   100% { opacity: 1.0; }
 }
 
