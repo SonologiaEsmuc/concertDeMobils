@@ -121,7 +121,9 @@ export default class NuTemplate extends NuBaseModule {
     this.animate2Frq2 = this.animate2Frq2.bind(this);
     this.osc2Frq = this.osc2Frq.bind(this);
     this.osc2FrqOff = this.osc2FrqOff.bind(this);
- 
+    this.oneShot = this.oneShot.bind(this);
+    this.oneSweep = this.oneSweep.bind(this);
+
     this.methodTriggeredFromServer = this.methodTriggeredFromServer.bind(this);
 
     // setup receive callbacks
@@ -550,6 +552,32 @@ this.notificationsChismesList=[
         this.monoOscB3.frequency.linearRampToValueAtTime(f2,currentTime+this.glideTime);
     }
   }
+
+  oneSweep(args){
+    let frq1 = args.shift();
+    let frq2 = args.shift();
+    let inTime = args.shift();
+    let vol = args.shift();
+
+    if(this.isStarted1)
+	    {
+	    	var currentTime = audioContext.currentTime;  
+          this.oscGain1.gain.cancelScheduledValues(currentTime);
+          this.oscGain1.gain.setValueAtTime(0.,currentTime);
+          this.oscGain1.gain.linearRampToValueAtTime(vol,currentTime+0.01);
+
+	        this.monoOsc1.frequency.cancelScheduledValues(currentTime);
+	        this.monoOsc1.frequency.setValueAtTime(frq1,currentTime);
+	        this.monoOsc1.frequency.linearRampToValueAtTime(frq2,currentTime+inTime);
+
+		   setTimeout(() => { 
+		          this.oscGain1.gain.cancelScheduledValues(currentTime);
+		          this.oscGain1.gain.setValueAtTime(vol,currentTime);
+		          this.oscGain1.gain.linearRampToValueAtTime(0.,currentTime+0.01);
+		    }, inTime * 1000);
+
+       	}
+	}
 
   setVolOsc(args){
       let voice = args.shift();
@@ -1050,7 +1078,7 @@ osc2Frq(args){
     this.frq2On = true;
 
  //   this.setFunctionLfo('filter');
-    this.lfo.frequency.value = (Math.floor(Math.random()*30) /100.);
+    this.lfo.frequency.value = (Math.floor(Math.random()*12) /100.)+0.0;
 
     this.frq2frq1= (440/32) * (2 ** ((midiNote1 - 9) / 12));
     this.frq2frq2= (440/32) * (2 ** ((midiNote2 - 9) / 12));
@@ -1058,7 +1086,7 @@ osc2Frq(args){
         this.animate2Frq1();
   }
 
-osc2FrqOff(args){
+osc2FrqOff(){
     this.frq2On = false;
 }
 
@@ -1112,7 +1140,7 @@ animate2Frq2(){
     	var bufferSourceOne = audioContext.createBufferSource();
 	    var bufferGainOne = audioContext.createGain();
   		bufferSourceOne.loop = false;
-  		bufferSourceOne.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
+  		bufferSourceOne.playbackRate.value = (Math.floor(Math.random()*100) /100.)+0.2;
   		bufferSourceOne.connect(bufferGainOne);
     	bufferGainOne.connect(this.filter);
 
@@ -1184,6 +1212,25 @@ animate2Frq2(){
   sampleSpeed(value) {
   	this.bufferSource.playbackRate.value = value;
   }
+
+  oneShot(trackName)
+  {
+  	  	var bufferSourceGav = audioContext.createBufferSource();
+	    var bufferGainGav = audioContext.createGain();
+  		bufferSourceGav.loop = false;
+  		bufferSourceGav.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
+  		bufferSourceGav.connect(bufferGainGav);
+    	bufferGainGav.connect(this.filter);
+
+    	const audioBuffer = this.e.loader.data[trackName];
+ 
+    	bufferSourceGav.buffer = audioBuffer;
+	    bufferSourceGav.start();
+
+	    setTimeout(() => {
+	    		    bufferSourceGav.stop();
+ 	   }, 2 * 1000);
+	}
 
   convolverVol(value){
       var currGain = this.convolverGain.gain.value; 
