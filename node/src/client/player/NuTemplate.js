@@ -92,6 +92,10 @@ export default class NuTemplate extends NuBaseModule {
     this.setFrqLfo = this.setFrqLfo.bind(this);
     this.setAmpLfo = this.setAmpLfo.bind(this);
     this.setFunctionLfo = this.setFunctionLfo.bind(this);
+    this.setTypeLfo2 = this.setTypeLfo2.bind(this);
+    this.setFrqLfo2 = this.setFrqLfo2.bind(this);
+    this.setAmpLfo2 = this.setAmpLfo2.bind(this);
+    this.setFunctionLfo2 = this.setFunctionLfo2.bind(this);
     this.samplePlay = this.samplePlay.bind(this);
     this.sampleStop = this.sampleStop.bind(this);
     this.sampleLoopIn = this.sampleLoopIn.bind(this);
@@ -144,7 +148,9 @@ export default class NuTemplate extends NuBaseModule {
     this.oscGainB3 = audioContext.createGain();
     this.lfo = audioContext.createOscillator();
     this.lfoGain = audioContext.createGain();
-	  this.bufferSource = audioContext.createBufferSource();
+    this.lfo2 = audioContext.createOscillator();
+    this.lfoGain2 = audioContext.createGain();
+    this.bufferSource = audioContext.createBufferSource();
     this.bufferGain = audioContext.createGain();
     this.analyser =  audioContext.createAnalyser(); // analyser for waveform animation
     this.convolver = audioContext.createConvolver();
@@ -170,6 +176,7 @@ export default class NuTemplate extends NuBaseModule {
     this.filter.connect(this.analyser);
     this.analyser.connect(this.e.nuOutput.in);
     this.lfo.connect(this.lfoGain);   
+    this.lfo2.connect(this.lfoGain2);   
     this.bufferSource.connect(this.bufferGain);
     this.bufferGain.connect(this.filter);
     this.filter.connect(this.convolver);
@@ -220,8 +227,11 @@ export default class NuTemplate extends NuBaseModule {
     this.currGainB1 = 0.;
     this.currLfoFrq = 1.;
     this.currLfoGain = 0.;   
+    this.currLfoFrq2 = 1.;
+    this.currLfoGain2 = 0.;   
     this.glideTime = 0.1;
     this.lfoFunction = 'none';
+    this.lfoFunction2 = 'none';
     this.tuneDiff = 0; //extra Osc tune difference from osc
     this.bufferSource.loop = false;
     this.bufferGain.gain.value = 1.;
@@ -1048,6 +1058,73 @@ this.notificationsChismesList=[
               this.lfo.start();
               this.lfoFunction = value;
       } 
+      if (value === 'lfoFrq') {
+    		if(this.lfoFunction != 'none') this.lfo.stop();
+    		  this.lfoGain.disconnect();
+              this.lfo = audioContext.createOscillator();
+              this.lfo.connect(this.lfoGain);
+              this.lfo.frequency.value = this.currLfoFrq;
+              this.lfoGain.gain.value = this.currLfoGain;
+              this.lfoGain.connect(this.lfo2.frequency); 
+              this.lfo.start();
+              this.lfoFunction = value;
+      } 
+  }
+  setFunctionLfo2(value){
+    
+      if (value === 'none' && this.lfoFunction2 != 'none') {
+        this.lfo2.stop();
+    	this.lfoGain2.disconnect();
+        this.lfoFunction2 = value;
+      } else 
+      if (value === 'tremolo') {
+    		if(this.lfoFunction2 != 'none') this.lfo2.stop();
+    		  this.lfoGain2.disconnect();
+              this.lfo2 = audioContext.createOscillator();
+              this.lfo2.connect(this.lfoGain2);
+              this.lfo2.frequency.value = this.currLfoFrq2;
+              this.lfoGain2.gain.value = this.currLfoGain2;
+              if (this.isStarted1) this.lfoGain2.connect(this.oscGain1.gain); 
+              if (this.isStarted2) this.lfoGain2.connect(this.oscGain2.gain); 
+              if (this.isStarted3) this.lfoGain2.connect(this.oscGain3.gain); 
+              this.lfo2.start();
+              this.lfoFunction2 = value;
+      } else
+      if (value === 'vibrato') {
+    		if(this.lfoFunction2 != 'none') this.lfo2.stop();
+    		  this.lfoGain2.disconnect();
+              this.lfo2 = audioContext.createOscillator();
+              this.lfo2.connect(this.lfoGain2);
+              this.lfo2.frequency.value = this.currLfoFrq2;
+              this.lfoGain2.gain.value = this.currLfoGain2;
+              if (this.isStarted1) this.lfoGain2.connect(this.monoOsc1.frequency); 
+              if (this.isStarted2) this.lfoGain2.connect(this.monoOsc2.frequency); 
+              if (this.isStarted3) this.lfoGain2.connect(this.monoOsc3.frequency); 
+              this.lfo2.start();
+              this.lfoFunction2 = value;
+      } else
+      if (value === 'filter') {
+    		if(this.lfoFunction2 != 'none') this.lfo2.stop();
+    		  this.lfoGain2.disconnect();
+              this.lfo2 = audioContext.createOscillator();
+              this.lfo2.connect(this.lfoGain2);
+              this.lfo2.frequency.value = this.currLfoFrq2;
+              this.lfoGain2.gain.value = this.currLfoGain2;
+              this.lfoGain2.connect(this.filter.frequency); 
+              this.lfo2.start();
+              this.lfoFunction2 = value;
+      } 
+      if (value === 'lfoFrq') {
+    		if(this.lfoFunction2 != 'none') this.lfo2.stop();
+    		  this.lfoGain2.disconnect();
+              this.lfo2 = audioContext.createOscillator();
+              this.lfo2.connect(this.lfoGain2);
+              this.lfo2.frequency.value = this.currLfoFrq2;
+              this.lfoGain2.gain.value = this.currLfoGain2;
+              this.lfoGain2.connect(this.lfo.frequency); 
+              this.lfo2.start();
+              this.lfoFunction2 = value;
+      } 
   }
   setAmpLfo(value){
       var currGain = this.lfoGain.gain.value; 
@@ -1056,8 +1133,17 @@ this.notificationsChismesList=[
       this.lfoGain.gain.cancelScheduledValues(currentTime);
       this.lfoGain.gain.setValueAtTime(currGain,currentTime);
       this.lfoGain.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
-      //console.log('amp');
   }
+
+  setAmpLfo2(value){
+      var currGain = this.lfoGain2.gain.value; 
+      this.currLfoGain2 = value;
+      var currentTime = audioContext.currentTime;         
+      this.lfoGain2.gain.cancelScheduledValues(currentTime);
+      this.lfoGain2.gain.setValueAtTime(currGain,currentTime);
+      this.lfoGain2.gain.linearRampToValueAtTime(value,currentTime+this.glideTime);
+  }
+
   setFrqLfo(value){
       var tempFrq = this.lfo.frequency.value;
       this.currLfoFrq = value;
@@ -1066,9 +1152,22 @@ this.notificationsChismesList=[
       this.lfo.frequency.setValueAtTime(tempFrq,currentTime);
       this.lfo.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
   }
+
+  setFrqLfo2(value){
+      var tempFrq = this.lfo2.frequency.value;
+      this.currLfoFrq2 = value;
+      var currentTime = audioContext.currentTime;
+      this.lfo2.frequency.cancelScheduledValues(currentTime);
+      this.lfo2.frequency.setValueAtTime(tempFrq,currentTime);
+      this.lfo2.frequency.linearRampToValueAtTime(value,currentTime+this.glideTime);
+  }
   setTypeLfo(value){
   	this.currentLfoType = value;
     this.lfo.type = value; 
+  }
+  setTypeLfo2(value){
+  	this.currentLfoType2 = value;
+    this.lfo2.type = value; 
   }
 
 osc2Frq(args){
