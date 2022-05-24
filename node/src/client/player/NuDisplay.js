@@ -113,6 +113,7 @@ this.notificationsChismesList=[
     this.isNotifyingChismes = false;
     this.chismesCounter = 0;
     this.inputText = "";
+    this.isFading = false;
 
     // this.bkgColorArray = [0,0,0];
     this.blinkStatus = { isBlinking: false, savedBkgColor: [0,0,0] };
@@ -120,6 +121,7 @@ this.notificationsChismesList=[
     // binding
     this.analyserCallback = this.analyserCallback.bind(this);
     this.animateLoop = this.animateLoop.bind(this);
+    this.animateFade = this.animateFade.bind(this);
 
     // setup receive callbacks
     this.e.receive(this.moduleName, (args) => {
@@ -206,9 +208,9 @@ this.notificationsChismesList=[
       {
             if(Math.floor(Math.random()*10 < 5))
             {
-            var num = Math.floor(Math.random()*50);
-            document.getElementById('text3').innerHTML = this.notificationsList[num];
-          }
+            	var num = Math.floor(Math.random()*50);
+            	document.getElementById('text3').innerHTML = this.notificationsList[num];
+          	}
           //label(ctx2,cw,ch*0.8,"scanning hard disks ....",0);
       }
 
@@ -216,9 +218,9 @@ this.notificationsChismesList=[
       {
             if(Math.floor(Math.random()*50 < 1))
             {
-            if(this.chismesCounter < 20)
-              document.getElementById('text3').innerHTML = this.notificationsChismesList[this.chismesCounter];
-            this.chismesCounter ++;
+            	if(this.chismesCounter < 20)
+              		document.getElementById('text3').innerHTML = this.notificationsChismesList[this.chismesCounter];
+            	this.chismesCounter ++;
           }
           //label(ctx2,cw/2,ch*0.8,"Els vostres comentaris:",0);
       }
@@ -388,6 +390,15 @@ this.notificationsChismesList=[
     }, time * 1000);
   }
 
+  fade(){
+    this.isFading = true;
+    this.animateFade();
+
+    setTimeout(() => { 
+       this.isFading = false;
+    }, 5 * 1000);
+  }
+
  // change screen color to a random color for 'time' duration (in sec)
   randomBlink(time = 0.4){
     // discard if already blinking
@@ -416,14 +427,16 @@ this.notificationsChismesList=[
       this.chismesCounter = 0;
         document.getElementById('text3').innerHTML = this.inputText;
        this.isNotifyingChismes = true;
+       this.isNotifying = false;
        setTimeout(() => { 
           this.isNotifyingChismes = false;
           document.getElementById('text3').innerHTML = "segur que no soc un bot?";
-      }, 13 * 1000);
+      }, 10 * 1000);
     }
     if(value == 'data')
     {
        this.isNotifying = true;
+       this.isNotifyingChismes = false;
        setTimeout(() => { 
           this.isNotifying = false;
           document.getElementById('text3').innerHTML = "Transferred information";
@@ -449,33 +462,47 @@ this.notificationsChismesList=[
   {
     if(this.isGlitching == true)
     {
+      		//console.log("IN");
+	      var randNum = Math.floor(Math.random()*100);
+	        if(randNum < 30)
+	        {
+	            for (let i = 0; i < 3; i++)
+	              this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+
+	            this.bkgChangeColor = true;
+	        }else if(randNum > 70)
+	        {
+	            if(this.isRandomGlitching){
+	              for (let i = 0; i < 3; i++)
+	                this.colors.current[i] = Math.floor(Math.random()*255);
+	            }else
+	            {
+	              for (let i = 0; i < 3; i++)
+	                this.colors.current[i] = this.colors.glitch[i];
+	            }
+	            this.bkgChangeColor = true;
+	        }
+	    }
+
+	    if(this.isGlitching == true) 
+     	   requestAnimationFrame(this.animateLoop);
+	}
+	
+
+  animateFade()
+  {
+    if(this.isFading == true)
+    {
       
+        if(this.colors.current[0] < 255)
+              this.colors.current[0]=this.colors.current[0]+0.01;
 
-      var randNum = Math.floor(Math.random()*100);
-        if(randNum < 30)
-        {
-            for (let i = 0; i < 3; i++)
-              this.colors.current[i] = this.blinkStatus.savedBkgColor[i];
+        this.bkgChangeColor = true;
+        this.overrideForceRender = true;
 
-            this.bkgChangeColor = true;
-        }else if(randNum > 70)
-        {
-            if(this.isRandomGlitching){
-              for (let i = 0; i < 3; i++)
-                this.colors.current[i] = Math.floor(Math.random()*255);
-            }else
-            {
-              for (let i = 0; i < 3; i++)
-                this.colors.current[i] = this.colors.glitch[i];
-            }
-            this.bkgChangeColor = true;
-        }
-    }
-
-    
-
-    if(this.isGlitching == true) 
-        requestAnimationFrame(this.animateLoop);
+    if(this.isFading == true) 
+        requestAnimationFrame(this.animateFade);
+	}
   }
 
 }

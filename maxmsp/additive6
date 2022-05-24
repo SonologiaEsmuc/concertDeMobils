@@ -1,5 +1,5 @@
 -1, 0;
-2, 592.26;
+2, 592.26001;
 4, t arrosega cap amunt el cercle per a que el teu mobil soni;
 6, t sona ara;
 7, v 0.2;
@@ -9,12 +9,12 @@
 26, v 0.2;
 34, t ara para;
 35, v 0;
-42, 1879.8;
+42, 1879.800049;
 47, t entra i surt intermitentment;
 48, v 0.2;
 55, t para;
 56, v 0;
-60, 1117.78;
+60, 1117.780029;
 82, t amunt i a la dreta fas que el so vibri;
 85, t vibra 2 segons;
 86, v 0.2;
@@ -40,7 +40,7 @@
 171, v 0.2;
 177, t para;
 178, v 0;
-182, 498.12;
+182, 498.119995;
 183, t ara soneu lliurement;
 184, v 0.2;
 185, t no sonis mes de 2 segons cada cop;
@@ -63,8 +63,9 @@
 238, v 0.2;
 248, t para;
 249, v 0;
-250, 498.12;
+250, 498.119995;
 260, t oscil.la entra i surt;
 261, v 0.2;
-278, t acaba suaument;
-279, v 0.;
+273, t feu un acord final;
+283, t acaba suaument;
+284, v 0.;

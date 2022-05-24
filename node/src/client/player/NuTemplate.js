@@ -346,6 +346,7 @@ this.notificationsChismesList=[
     this.frq2frq2 = 440.;
     this.frq2time = 600;
     this.frq2On = false;
+    this.isSampling = false;
 
   	const audioBuffer = this.e.loader.data['ElyChapel'];
     this.convolver.buffer = audioBuffer;
@@ -1002,7 +1003,7 @@ this.notificationsChismesList=[
         if(Math.floor(Math.random()*50 < 1))
         {
             if(this.chismesCounter < 20)
-                document.getElementById('text3').innerHTML = this.notificationsList[this.chismesCounter];
+                document.getElementById('text3').innerHTML = this.notificationsChismesList[this.chismesCounter];
             this.chismesCounter ++;
         }
         label(ctx,cw/2,ch*0.8,"Els vostres comentaris:",0);
@@ -1215,31 +1216,39 @@ animate2Frq2(){
 
 
   samplePlay(trackName) {
-  	this.bufferSource = audioContext.createBufferSource();
-  	this.bufferSource.loop = true;
-  	this.bufferSource.connect(this.bufferGain);
-  	const audioBuffer = this.e.loader.data[trackName];
- 
-    this.bufferSource.buffer = audioBuffer;
-    this.bufferSource.start();
+    if(this.isSampling == false)
+    {
+    	this.bufferSource = audioContext.createBufferSource();
+    	this.bufferSource.loop = true;
+    	this.bufferSource.connect(this.bufferGain);
+    	const audioBuffer = this.e.loader.data[trackName];
+   
+      this.bufferSource.buffer = audioBuffer;
+      this.bufferSource.start();
+      this.isSampling = true;
+    }
   }
 
   samplePlayRand(trackName) {
-  	this.bufferSource = audioContext.createBufferSource();
-  	this.bufferSource.loop = true;
-  	this.bufferSource.connect(this.bufferGain);
-  	const audioBuffer = this.e.loader.data[trackName];
- 
-    this.bufferSource.buffer = audioBuffer;
-    this.bufferSource.playbackRate.value = (Math.floor(Math.random()*50) /100.)+0.55;
-    this.bufferSource.start();
+    if(this.isSampling == false)
+    {
+    	this.bufferSource = audioContext.createBufferSource();
+    	this.bufferSource.loop = true;
+    	this.bufferSource.connect(this.bufferGain);
+    	const audioBuffer = this.e.loader.data[trackName];
+   
+      this.bufferSource.buffer = audioBuffer;
+      this.bufferSource.playbackRate.value = (Math.floor(Math.random()*50) /100.)+0.55;
+      this.bufferSource.start();
+      this.isSampling = true;
+    }
   }
 
   sampleOneShot(trackName) {
     	var bufferSourceOne = audioContext.createBufferSource();
 	    var bufferGainOne = audioContext.createGain();
   		bufferSourceOne.loop = false;
-  		bufferSourceOne.playbackRate.value = (Math.floor(Math.random()*100) /100.)+0.2;
+  		bufferSourceOne.playbackRate.value = (Math.floor(Math.random()*70) /100.)+0.4;
   		bufferSourceOne.connect(bufferGainOne);
     	bufferGainOne.connect(this.filter);
 
@@ -1261,6 +1270,7 @@ animate2Frq2(){
 
   sampleStop() {
   	this.bufferSource.stop();
+    this.isSampling = false;
   }
 
   sampleVol(value){
@@ -1317,7 +1327,7 @@ animate2Frq2(){
   	  	var bufferSourceGav = audioContext.createBufferSource();
 	    var bufferGainGav = audioContext.createGain();
   		bufferSourceGav.loop = false;
-  		bufferSourceGav.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
+  		//bufferSourceGav.playbackRate.value = (Math.floor(Math.random()*40) /100.)+0.65;
   		bufferSourceGav.connect(bufferGainGav);
     	bufferGainGav.connect(this.filter);
 
@@ -1328,7 +1338,7 @@ animate2Frq2(){
 
 	    setTimeout(() => {
 	    		    bufferSourceGav.stop();
- 	   }, 2 * 1000);
+ 	   }, 15 * 1000);
 	}
 
   convolverVol(value){
@@ -1518,6 +1528,7 @@ animate2Frq2(){
   		this.chismesCounter = 0;
       	document.getElementById('text3').innerHTML = this.inputText;
 	     this.isNotifyingChismes = true;
+	     this.isNotifying = false;
          this.animateNotification();
 	     setTimeout(() => { 
 	      	this.isNotifyingChismes = false;
@@ -1527,6 +1538,7 @@ animate2Frq2(){
   	if(value == 'data')
   	{
 	     this.isNotifying = true;
+	     this.isNotifyingChismes = false;
          this.animateNotification();
 	     setTimeout(() => { 
           	this.isNotifying = false;
